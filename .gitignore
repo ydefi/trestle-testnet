@@ -1,0 +1,27 @@
+# Testnet Repository
+
+# Dependencies
+node_modules/
+
+# Environment files - NEVER commit .env with real keys
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
+artifacts/
+cache/
+typechain-types/
+
+# Logs and OS files
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
