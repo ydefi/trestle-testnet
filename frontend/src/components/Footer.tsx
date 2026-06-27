@@ -20,6 +20,7 @@ export default function Footer() {
             <li><Link to="/" className="hover:text-emerald-400 transition-colors">Dashboard</Link></li>
             <li><Link to="/marketplace" className="hover:text-emerald-400 transition-colors">Marketplace</Link></li>
             <li><Link to="/rwa" className="hover:text-emerald-400 transition-colors">RWA</Link></li>
+            <li><a href="https://trestle-defi.github.io/trestle-whitepaper" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Whitepaper</a></li>
           </ul>
         </div>
         <div className="col-span-2 md:col-span-1">

@@ -4,7 +4,7 @@ import Dashboard from "./pages/Dashboard";
 import Marketplace from "./pages/Marketplace";
 import RWA from "./pages/RWA";
 import Faucet from "./pages/Faucet";
-import { useWalletSign } from "./components/QRCode";
+import { useWalletSign } from "./hooks/useWalletSign";
 
 export default function App() {
   useWalletSign();

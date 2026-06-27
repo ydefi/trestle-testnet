@@ -22,8 +22,12 @@ contract FeeDistributor is Ownable {
     event Distributed(address indexed token, uint256 total, uint256 yieldShare, uint256 treasuryShare, uint256 buybackShare);
     event ConfigUpdated(string indexed param);
 
-    constructor(address _treasury) Ownable(msg.sender) {
+    error ZeroAddress();
+
+    constructor(address _treasury, address _buybackBurn) Ownable(msg.sender) {
+        if (_treasury == address(0) || _buybackBurn == address(0)) revert ZeroAddress();
         treasury = _treasury;
+        buybackBurn = _buybackBurn;
     }
 
     function setYieldVault(address _yieldVault) external onlyOwner {
@@ -74,7 +78,8 @@ contract FeeDistributor is Ownable {
     }
 
     function _transfer(address token, address to, uint256 amount) private {
-        if (to == address(0) || amount == 0) return;
+        if (to == address(0)) revert ZeroAddress();
+        if (amount == 0) return;
         if (token == address(0)) {
             (bool s,) = payable(to).call{value: amount}("");
             require(s, "ETH transfer failed");

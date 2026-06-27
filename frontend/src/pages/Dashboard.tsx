@@ -1,5 +1,6 @@
 import { useContracts } from "../hooks/useContracts";
 import LoadingSpinner from "../components/LoadingSpinner";
+import QRIcon from "../components/QRIcon";
 
 export default function Dashboard() {
   const { address, balance } = useContracts();
@@ -56,14 +57,9 @@ export default function Dashboard() {
       </div>
 
       {/* QR for mobile access */}
-      <div className="text-center">
-        <div className="bg-white rounded-xl shadow border border-gray-100 p-4 inline-block">
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent("https://testnet.trestle.website")}&color=059669&bgcolor=ffffff&ecc=M`}
-            alt="QR Code"
-            className="rounded mx-auto"
-          />
-          <p className="text-[10px] text-gray-400 mt-1">Scan to open on mobile</p>
+      <div className="flex justify-center">
+        <div className="bg-white rounded-xl shadow border border-gray-100 p-3">
+          <QRIcon value="https://testnet.trestle.website" size={90} />
         </div>
       </div>
     </div>

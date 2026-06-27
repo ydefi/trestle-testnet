@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { useAccount, useConnect } from "wagmi";
-import { injected } from "wagmi/connectors";
+import { useState } from "react";
+import { useAccount } from "wagmi";
 import { useReadContracts, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits, type Address } from "viem";
 
@@ -18,19 +17,10 @@ const TOKENS = [
 ].filter(t => t.addr && t.addr !== "0x...");
 
 export default function Faucet() {
-  const { address } = useAccount();
-  const { connectAsync } = useConnect();
+  const { address, connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const [busy, setBusy] = useState<string | null>(null);
   const [txHash, setTxHash] = useState("");
-  const [connecting, setConnecting] = useState(false);
-
-  useEffect(() => {
-    if (!address && window.ethereum && !connecting) {
-      setConnecting(true);
-      connectAsync({ connector: injected() }).catch(() => setConnecting(false));
-    }
-  }, [address, connectAsync, connecting]);
 
   const { data: balances, refetch } = useReadContracts({
     contracts: TOKENS.map(t => ({ abi: ERC20_ABI, address: t.addr, functionName: "balanceOf", args: address ? [address] : [] })),
@@ -41,7 +31,7 @@ export default function Faucet() {
     if (!address || busy) return;
     setBusy(token.id); setTxHash("");
     try {
-      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, MINT_AMOUNT] } as any);
+      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, MINT_AMOUNT], connector } as any);
       setTxHash(hash);
       setTimeout(refetch, 2000);
     } catch (e: any) { console.error(e); }

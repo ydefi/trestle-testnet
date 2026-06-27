@@ -1,5 +1,7 @@
 import { Outlet, NavLink } from "react-router-dom";
+import { useSwitchChain } from "wagmi";
 import { useContracts } from "../hooks/useContracts";
+import { polygonAmoy } from "../config/web3";
 import WalletStatus from "./WalletStatus";
 import AstraChat from "./AstraChat";
 import Footer from "./Footer";
@@ -15,6 +17,7 @@ const NAV_TABS = [
 
 export default function Layout() {
   const { isCorrectChain, chainName } = useContracts();
+  const { switchChainAsync } = useSwitchChain();
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-emerald-100 pt-16">
@@ -59,8 +62,14 @@ export default function Layout() {
       </div>
 
       {!isCorrectChain && (
-        <div className="p-2 bg-red-100/50 backdrop-blur-sm text-red-700 text-sm text-center">
-          Switch to Polygon Amoy Testnet
+        <div className="p-2 bg-red-100/50 backdrop-blur-sm text-red-700 text-sm text-center flex items-center justify-center gap-3">
+          <span>Wrong network — connect to Polygon Amoy Testnet</span>
+          <button
+            onClick={() => switchChainAsync({ chainId: polygonAmoy.id }).catch(() => {})}
+            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors"
+          >
+            Switch to Amoy
+          </button>
         </div>
       )}
       {isCorrectChain && (

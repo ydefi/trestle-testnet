@@ -19,7 +19,7 @@ describe("Testnet Contracts", function () {
     await govToken.waitForDeployment();
 
     const FeeDistributor = await ethers.getContractFactory("FeeDistributor");
-    feeDistributor = await FeeDistributor.deploy(treasury.address);
+    feeDistributor = await FeeDistributor.deploy(treasury.address, buyer.address);
     await feeDistributor.waitForDeployment();
 
     const DigitalGoods = await ethers.getContractFactory("DigitalGoods");
@@ -50,7 +50,8 @@ describe("Testnet Contracts", function () {
 
       const balBefore = {
         treasury: await ethers.provider.getBalance(treasury.address),
-        feeDist: await ethers.provider.getBalance(await feeDistributor.getAddress()),
+        yieldVault: await ethers.provider.getBalance(user.address),
+        buyback: await ethers.provider.getBalance(buyer.address),
       };
 
       await feeDistributor.connect(deployer).distribute(ethers.ZeroAddress);
@@ -61,11 +62,14 @@ describe("Testnet Contracts", function () {
 
       const balAfter = {
         treasury: await ethers.provider.getBalance(treasury.address),
-        feeDist: await ethers.provider.getBalance(await feeDistributor.getAddress()),
+        yieldVault: await ethers.provider.getBalance(user.address),
+        buyback: await ethers.provider.getBalance(buyer.address),
       };
 
       expect(balAfter.treasury - balBefore.treasury).to.equal(treasuryShare);
-      expect(balAfter.feeDist).to.equal(buybackShare);
+      expect(balAfter.yieldVault - balBefore.yieldVault).to.equal(yieldShare);
+      expect(balAfter.buyback - balBefore.buyback).to.equal(buybackShare);
+      expect(await ethers.provider.getBalance(await feeDistributor.getAddress())).to.equal(0n);
     });
   });
 

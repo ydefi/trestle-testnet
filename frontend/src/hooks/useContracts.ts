@@ -51,7 +51,7 @@ const A = (key: string): Address =>
   (import.meta.env[`VITE_${key}`] as Address) ?? PLACEHOLDER as Address;
 
 export function useContracts() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, connector } = useAccount();
   const chainId = useChainId();
   const { data: native } = useBalance({ address });
 
@@ -67,11 +67,12 @@ export function useContracts() {
 
   const { writeContractAsync } = useWriteContract();
   const write = (payload: Parameters<typeof writeContractAsync>[0]) =>
-    writeContractAsync(payload as any);
+    writeContractAsync({ ...payload, connector } as any);
 
   return {
     address,
     isConnected,
+    connector,
     isCorrectChain,
     chainName,
     balance: isCorrectChain && native ? formatUnits(native.value, native.decimals) : "0",

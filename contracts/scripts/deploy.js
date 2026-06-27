@@ -16,6 +16,7 @@ async function main() {
   console.log("Balance:", hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)), "native\n");
 
   const TREASURY = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";
+  const BUYBACK_BURN = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";
   const GOV_SUPPLY = hre.ethers.parseEther("1000000");
 
   const deployed = {};
@@ -31,7 +32,7 @@ async function main() {
   // 2. Fee Distributor
   console.log("[2/5] Deploying FeeDistributor...");
   const FeeDistributor = await hre.ethers.getContractFactory("FeeDistributor");
-  const feeDistributor = await FeeDistributor.deploy(TREASURY);
+  const feeDistributor = await FeeDistributor.deploy(TREASURY, BUYBACK_BURN);
   await feeDistributor.waitForDeployment();
   deployed.feeDistributor = await feeDistributor.getAddress();
   console.log("  ->", deployed.feeDistributor);
@@ -77,7 +78,7 @@ async function main() {
   if (networkName !== "hardhat") {
     console.log("\nVerifying contracts...");
     await verify("MockGovernanceToken", deployed.govToken, ["Trestle Governance", "tGOV", 18, GOV_SUPPLY]);
-    await verify("FeeDistributor", deployed.feeDistributor, [TREASURY]);
+    await verify("FeeDistributor", deployed.feeDistributor, [TREASURY, BUYBACK_BURN]);
     await verify("DigitalGoods", deployed.digitalGoods, []);
     await verify("FreelancerEscrow", deployed.freelancerEscrow, []);
     await verify("DigitalRWA", deployed.digitalRWA, [

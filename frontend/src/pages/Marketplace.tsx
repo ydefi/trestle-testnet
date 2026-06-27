@@ -30,19 +30,18 @@ const DG_ABI = [
 
 export default function Marketplace() {
   const { isConnected, isCorrectChain, digitalGoodsReady, digitalGoodsAddr } = useContracts();
+  const { address, connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
-  const { address } = useAccount();
-  const { data: nativeBal } = useAccount() as any;
 
   const [tab, setTab] = useState<Tab>("browse");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState("");
 
   const [pricingMode, setPricingMode] = useState<PricingMode>("fixed");
-  const [metaURI, setMetaURI] = useState("");
-  const [fixedPrice, setFixedPrice] = useState("");
-  const [startPrice, setStartPrice] = useState("");
-  const [reservePrice, setReservePrice] = useState("");
+  const [metaURI, setMetaURI] = useState("ipfs://QmExampleNFT — Unique Digital Artwork");
+  const [fixedPrice, setFixedPrice] = useState("25");
+  const [startPrice, setStartPrice] = useState("100");
+  const [reservePrice, setReservePrice] = useState("10");
   const [durationHrs, setDurationHrs] = useState("24");
 
   const [buyToken, setBuyToken] = useState<BuyToken>("native");
@@ -84,8 +83,14 @@ export default function Marketplace() {
 
   const active = useMemo(() => listings.filter(l => l.status === 0), [listings]);
 
+  const EXAMPLE_LISTINGS: Listing[] = [
+    { id: 1n, seller: "0x1234...5678" as Address, metadataURI: "ipfs://QmPizzaNFT — Vintage Pixel Art Slice #01", pricing: 0, price: parseUnits("100", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, currentPrice: parseUnits("100", 18) },
+    { id: 2n, seller: "0x8765...4321" as Address, metadataURI: "ipfs://QmDutchNFT — Generative Geometry Collection", pricing: 1, price: parseUnits("500", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, currentPrice: parseUnits("320", 18) },
+    { id: 3n, seller: "0xABCD...EF01" as Address, metadataURI: "ipfs://QmMusicNFT — Lo-Fi Beat License", pricing: 0, price: parseUnits("50", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, currentPrice: parseUnits("50", 18) },
+  ];
+
   // ── Helpers ──
-  const write = (args: any) => writeContractAsync({ ...args, abi: DG_ABI, address: addr } as any);
+  const write = (args: any) => writeContractAsync({ ...args, abi: DG_ABI, address: addr, connector } as any);
 
   async function handleCreate() {
     if (!digitalGoodsReady || busy) return;
@@ -105,14 +110,14 @@ export default function Marketplace() {
     setBusy(true); setTxHash(""); setBuyingId(Number(l.id));
     try {
       if (buyToken === "native") {
-        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buy", args: [BigInt(l.id)], value: l.currentPrice } as any);
+        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buy", args: [BigInt(l.id)], value: l.currentPrice, connector } as any);
         setTxHash(hash);
       } else {
         const tokenAddr = TOKEN_ADDRS[buyToken] as Address;
         if (!tokenAddr) throw new Error("Token address not configured");
-        const approve = await writeContractAsync({ abi: ERC20_ABI, address: tokenAddr, functionName: "approve", args: [addr, l.currentPrice] } as any);
+        const approve = await writeContractAsync({ abi: ERC20_ABI, address: tokenAddr, functionName: "approve", args: [addr, l.currentPrice], connector } as any);
         await new Promise(r => setTimeout(r, 2000));
-        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buyWithToken", args: [BigInt(l.id), tokenAddr, l.currentPrice] } as any);
+        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buyWithToken", args: [BigInt(l.id), tokenAddr, l.currentPrice], connector } as any);
         setTxHash(hash);
       }
     } catch (e: any) { console.error(e); }
@@ -169,13 +174,13 @@ export default function Marketplace() {
 
           {tab === "browse" && (
             <>
-              {active.length === 0 ? (
+              {(active.length === 0 && !digitalGoodsReady) ? (
                 <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
-                  <p className="text-gray-400">No active listings yet — be the first!</p>
+                  <p className="text-gray-400">Marketplace contract not deployed on this network.</p>
                 </div>
               ) : (
                 <div className="grid gap-4 md:grid-cols-2">
-                  {active.map(l => {
+                  {(active.length > 0 ? active : EXAMPLE_LISTINGS).map(l => {
                     const isBuyingThis = buyingId === Number(l.id);
                     return (
                       <div key={Number(l.id)} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition flex flex-col">

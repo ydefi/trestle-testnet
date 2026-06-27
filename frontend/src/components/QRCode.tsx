@@ -1,6 +1,3 @@
-import { useEffect, useState } from "react";
-import { useAccount, useSignMessage } from "wagmi";
-
 const SITE_URL = "https://testnet.trestle.website";
 
 export default function QRCode({
@@ -24,25 +21,4 @@ export default function QRCode({
       </p>
     </div>
   );
-}
-
-export function useWalletSign() {
-  const { address, isConnected } = useAccount();
-  const { signMessageAsync } = useSignMessage();
-  const [signed, setSigned] = useState(() => !!sessionStorage.getItem("trestle_testnet_sig"));
-
-  useEffect(() => {
-    if (isConnected && address && !signed) {
-      signMessageAsync({
-        message: `Welcome to Trestle DeFi! This message confirms your identity. Nonce: ${Date.now()}`,
-      })
-        .then((sig) => {
-          sessionStorage.setItem("trestle_testnet_sig", JSON.stringify({ address, sig, ts: Date.now() }));
-          setSigned(true);
-        })
-        .catch(() => {});
-    }
-  }, [isConnected, address, signed, signMessageAsync]);
-
-  return { signed };
 }
