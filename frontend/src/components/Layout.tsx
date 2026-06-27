@@ -1,165 +1,78 @@
 import { Outlet, NavLink } from "react-router-dom";
 import { useContracts } from "../hooks/useContracts";
 import WalletStatus from "./WalletStatus";
-import QRCode from "./QRCode";
+import AstraChat from "./AstraChat";
+import Footer from "./Footer";
+import Icon from "./Icon";
 
-const navLinks = [
-  { to: "/", label: "Dashboard", icon: "🏠" },
-  { to: "/marketplace", label: "Market", icon: "🏪" },
-  { to: "/rwa", label: "RWA", icon: "🏢" },
-  { to: "/withdraw", label: "Wallet", icon: "💰" },
+const NAV_TABS = [
+  { to: "https://trestle.website", label: "Home", icon: "\uD83C\uDFE0", external: true },
+  { to: "/", label: "Dashboard", icon: "\uD83D\uDCCA" },
+  { to: "/marketplace", label: "Market", icon: "\uD83C\uDFEA" },
+  { to: "/rwa", label: "RWA", icon: "\uD83C\uDFDB\uFE0F" },
+  { to: "/faucet", label: "Faucet", icon: "\uD83D\uDCA7" },
 ];
 
 export default function Layout() {
   const { isCorrectChain, chainName } = useContracts();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-emerald-100">
-      <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-emerald-600">Trestle DeFi</span>
-                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
-                  Testnet
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <WalletStatus />
-              <a
-                href="https://t.me/TrestleDeFi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden sm:flex items-center gap-1.5 text-xs text-gray-500 hover:text-emerald-600 transition bg-gray-50 border border-gray-200 px-2 py-1 rounded"
-              >
-                Telegram
-              </a>
-            </div>
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-emerald-50 via-white to-emerald-100 pt-16">
+      <div className="fixed top-0 left-0 right-0 z-50 h-16 bg-white/80 backdrop-blur-sm border-b border-gray-200 flex items-center px-4">
+        <div className="max-w-7xl mx-auto w-full flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+            <Icon name="logo" size={22} />
+            <h1 className="text-xl font-bold text-emerald-600">Trestle</h1>
           </div>
-          <nav className="flex gap-6 mt-3">
-            {navLinks.map(({ to, label, icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                end={to === "/"}
-                className={({ isActive }) =>
-                  `text-sm font-medium flex items-center gap-1.5 ${isActive ? "text-emerald-600 border-b-2 border-emerald-600" : "text-gray-500 hover:text-gray-700"}`
-                }
-              >
-                {icon} {label}
-              </NavLink>
-            ))}
-          </nav>
+          <WalletStatus />
         </div>
-        {!isCorrectChain && (
-          <div className="p-2 bg-red-100/50 backdrop-blur-sm text-red-700 text-sm text-center">
-            Switch to Polygon Amoy Testnet
-          </div>
-        )}
-        {isCorrectChain && (
-          <div className="pb-1 text-xs text-gray-400 text-center">{chainName}</div>
-        )}
-      </header>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <div className="sticky top-16 z-40 bg-white/70 backdrop-blur-md border-b border-gray-100">
+        <div className="max-w-7xl mx-auto flex items-center justify-between px-2 sm:px-4 py-1.5">
+          <div className="flex gap-1 overflow-x-auto">
+            {NAV_TABS.map(({ to, label, icon, external }) =>
+              external ? (
+                <a
+                  key={to}
+                  href={to}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="whitespace-nowrap px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  {icon && <span>{icon}</span>} {label}
+                </a>
+              ) : (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === "/"}
+                  className="whitespace-nowrap px-3 py-1.5 text-sm font-medium text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors [&.active]:text-emerald-700 [&.active]:bg-emerald-100 [&.active]:font-semibold flex items-center gap-1"
+                >
+                  {icon && <span>{icon}</span>} {label}
+                </NavLink>
+              )
+            )}
+          </div>
+        </div>
+      </div>
+
+      {!isCorrectChain && (
+        <div className="p-2 bg-red-100/50 backdrop-blur-sm text-red-700 text-sm text-center">
+          Switch to Polygon Amoy Testnet
+        </div>
+      )}
+      {isCorrectChain && (
+        <div className="py-1 text-xs text-gray-400 text-center bg-white/50">{chainName}</div>
+      )}
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
         <Outlet />
       </main>
 
-      <footer className="bg-gray-900 text-gray-400">
-        <div className="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-white font-semibold mb-3">Trestle DeFi</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="https://trestle.website" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Main Site
-                </a>
-              </li>
-              <li>
-                <a href="https://github.com/Trestle-DeFi/wiki" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Docs
-                </a>
-              </li>
-              <li>
-                <a href="https://reward.trestle.website" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Reward Hub
-                </a>
-              </li>
-              <li>
-                <a href="https://t.me/trestle_bot/app" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Mini App
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-3">App</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <NavLink to="/" className="hover:text-emerald-400 transition-colors">
-                  Dashboard
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/marketplace" className="hover:text-emerald-400 transition-colors">
-                  Marketplace
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/rwa" className="hover:text-emerald-400 transition-colors">
-                  RWA
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/withdraw" className="hover:text-emerald-400 transition-colors">
-                  Wallet
-                </NavLink>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-3">Connect</h3>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <a href="https://discord.gg/4dCCvnJYGT" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Discord
-                </a>
-              </li>
-              <li>
-                <a href="https://t.me/TrestleDeFi" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  Telegram
-                </a>
-              </li>
-              <li>
-                <a href="https://github.com/Trestle-DeFi" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">
-                  GitHub
-                </a>
-              </li>
-              <li>
-                <a href="mailto:contact@trestle.website" className="hover:text-emerald-400 transition-colors">
-                  Email
-                </a>
-              </li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-white font-semibold mb-3">Network</h3>
-            <p className="text-xs text-gray-500">
-              Live on Polygon Amoy Testnet
-              <br />
-              Chain ID: 80002
-            </p>
-          </div>
-        </div>
-        <div className="max-w-7xl mx-auto px-4 py-4 border-t border-gray-800">
-          <p className="text-[10px] text-gray-500 text-center">
-            © {new Date().getFullYear()} Trestle DeFi. Testnet use only.
-          </p>
-        </div>
-      </footer>
+      <AstraChat />
+      <Footer />
     </div>
   );
 }

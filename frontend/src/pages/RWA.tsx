@@ -1,16 +1,10 @@
-import { useCallback, useState } from "react";
-import { useReadContract, useWriteContract } from "wagmi";
+import { useCallback } from "react";
+import { useReadContract } from "wagmi";
+import { formatUnits } from "viem";
 import { useContracts } from "../hooks/useContracts";
 
 export default function RWA() {
-  const { 
-    address, 
-    isConnected, 
-    rwaReady, 
-    rwaAddr, 
-    rwaABI,
-    whitelistUser
-  } = useContracts();
+  const { address, isConnected, rwaReady, rwaAddr, rwaABI } = useContracts();
 
   const kycKey = (addr: string) => `trestle_kyc_${addr.toLowerCase()}`;
   const kycApproved = address ? localStorage.getItem(kycKey(address)) === "true" : false;
@@ -27,6 +21,14 @@ export default function RWA() {
     abi: rwaABI, address: rwaAddr, functionName: "balanceOf",
     args: address ? [address] : undefined, query: { enabled: rwaReady && !!address },
   });
+  const { data: cap } = useReadContract({
+    abi: rwaABI, address: rwaAddr, functionName: "cap",
+    query: { enabled: rwaReady },
+  });
+  const { data: assetInfo } = useReadContract({
+    abi: rwaABI, address: rwaAddr, functionName: "assetInfo",
+    query: { enabled: rwaReady },
+  });
 
   const handleKyc = useCallback(() => {
     if (!address) return;
@@ -34,46 +36,21 @@ export default function RWA() {
     window.location.reload();
   }, [address]);
 
-  // State for investment form
-  const [investAmount, setInvestAmount] = useState("");
-  const [isInvesting, setIsInvesting] = useState(false);
-
-  const handleInvest = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!investAmount || !address) return;
-    
-    setIsInvesting(true);
-    try {
-      await whitelistUser(address, investAmount);
-      alert("Successfully invested in RWA!");
-      // Reset form
-      setInvestAmount("");
-    } catch (error: any) {
-      console.error("Error investing in RWA:", error);
-      alert(`Failed to invest: ${error.message || "Unknown error"}`);
-    } finally {
-      setIsInvesting(false);
-    }
-  }, [address, whitelistUser, investAmount]);
-
   if (!isConnected) {
     return (
       <div className="text-center py-12">
         <div className="text-4xl mb-2">🔐</div>
         <p className="text-gray-500">Connect wallet to access RWA</p>
-        <div className="bg-gray-50 rounded-xl p-4 max-w-sm mx-auto mt-4">
-          <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent("https://testnet.trestle.website/rwa")}&color=059669&bgcolor=ffffff&ecc=M`}
-            alt="QR"
-            className="rounded-lg mx-auto mb-2"
-          />
-          <p className="text-[10px] text-gray-400 font-medium">Scan with wallet to connect</p>
-        </div>
+        <div className="flex justify-center mt-4"><w3m-button /></div>
       </div>
     );
   }
 
   const isApproved = kycApproved || whitelisted === true;
+
+  const info = assetInfo as
+    | { name: string; description: string; lockupDuration: bigint; expectedReturnBps: bigint; underlyingAsset: string; redemptionDate: bigint; redemptionPrice: bigint }
+    | undefined;
 
   return (
     <div className="space-y-6">
@@ -92,7 +69,7 @@ export default function RWA() {
             <h3 className="font-semibold text-gray-900 mb-4">KYC Verification</h3>
             {isApproved ? (
               <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-center">
-                <p className="text-emerald-700 font-semibold text-lg">✓ KYC Approved</p>
+                <p className="text-emerald-700 font-semibold text-lg">KYC Approved</p>
                 {whitelisted === true && <p className="text-xs text-emerald-600 mt-1">Whitelisted on-chain</p>}
                 {address && <p className="text-xs text-emerald-500 mt-2 font-mono">{address.slice(0, 6)}...{address.slice(-4)}</p>}
               </div>
@@ -109,43 +86,45 @@ export default function RWA() {
 
           {isApproved && (
             <>
+              {/* Asset Info */}
               <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Available Assets</h3>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-medium text-sm text-gray-700">Digital Asset 1 (DA1)</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Total Supply: {totalSupply ? (Number(totalSupply) / 1e18).toLocaleString() : "..."} tokens
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    Your Balance: {userBalance ? (Number(userBalance) / 1e18).toLocaleString() : "0"} DA1
-                  </p>
-                </div>
+                <h3 className="font-semibold text-gray-900 mb-4">Asset Details</h3>
+                {info ? (
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium">{info.name}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Description</span><span className="font-medium text-right max-w-[60%]">{info.description}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Underlying Asset</span><span className="font-medium">{info.underlyingAsset}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Supply</span><span className="font-medium">{totalSupply ? formatUnits(totalSupply as bigint, 18) : "..."} / {cap ? formatUnits(cap as bigint, 18) : "..."}</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Your Balance</span><span className="font-medium">{userBalance ? formatUnits(userBalance as bigint, 18) : "0"} DA1</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Expected Return</span><span className="font-medium">{Number(info.expectedReturnBps) / 100}%</span></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Lockup Period</span><span className="font-medium">{Number(info.lockupDuration) / 86400}d</span></div>
+                    {Number(info.redemptionDate) > 0 && (
+                      <div className="flex justify-between"><span className="text-gray-500">Redemption Date</span><span className="font-medium">{new Date(Number(info.redemptionDate) * 1000).toLocaleDateString()}</span></div>
+                    )}
+                    {Number(info.redemptionPrice) > 0 && (
+                      <div className="flex justify-between"><span className="text-gray-500">Redemption Price</span><span className="font-medium">{formatUnits(info.redemptionPrice, 18)} MATIC</span></div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-400">Loading asset details...</p>
+                )}
               </div>
 
-              <div className="bg-white rounded-xl border border-gray-200 p-6">
-                <h3 className="font-semibold text-gray-900 mb-4">Invest in RWA</h3>
-                <form onSubmit={handleInvest} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Investment Amount (MATIC)</label>
-                    <input
-                      type="number"
-                      step="0.0001"
-                      min="0.0001"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      value={investAmount}
-                      onChange={(e) => setInvestAmount(e.target.value)}
-                      placeholder="Enter amount to invest in MATIC"
-                    />
+              {/* Mint / Admin */}
+              {address && (
+                <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <h3 className="font-semibold text-gray-900 mb-2">Admin</h3>
+                  <p className="text-xs text-gray-400 mb-3">Connected as {address.slice(0, 6)}...{address.slice(-4)}</p>
+                  <div className="flex gap-2">
+                    <button className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition">
+                      Mint Tokens
+                    </button>
+                    <button className="flex-1 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium rounded-lg transition">
+                      Manage Whitelist
+                    </button>
                   </div>
-                  <button
-                    type="submit"
-                    disabled={isInvesting}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-6 rounded-lg transition shadow-lg shadow-emerald-200"
-                  >
-                    {isInvesting ? "Processing..." : "Invest Now"}
-                  </button>
-                </form>
-              </div>
+                </div>
+              )}
             </>
           )}
         </>

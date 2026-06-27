@@ -1,12 +1,7 @@
-# Frontend (Vite)
+# Vite
 node_modules/
 .env
 .env.local
-.env.*.local
 dist/
 *.log
 .DS_Store
-
-# Optional: keep lockfiles
-# package-lock.json
-# yarn.lock

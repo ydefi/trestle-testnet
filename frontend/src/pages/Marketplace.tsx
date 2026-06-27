@@ -1,150 +1,131 @@
+import { useState, useMemo } from "react";
+import { useAccount } from "wagmi";
+import { useReadContracts, useWriteContract } from "wagmi";
+import { formatUnits, parseUnits, type Address } from "viem";
 import { useContracts } from "../hooks/useContracts";
-import { useReadContract, useWriteContract } from "wagmi";
-import { parseEther } from "viem";
-import { CONTRACT_ADDRESSES } from "../config/contracts";
-import { DIGITAL_GOODS_ABI, FREELANCER_ESCROW_ABI } from "../utils/abis";
-import { useState } from "react";
+
+type Tab = "browse" | "create";
+type PricingMode = "fixed" | "dutch";
+type BuyToken = "native" | "xGOV" | "xNOBT" | "xBRT";
+
+const ERC20_ABI = [
+  { inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
+] as const;
+
+const TOKEN_ADDRS: Record<string, string> = {
+  xGOV: import.meta.env.VITE_GOV_TOKEN || "",
+  xNOBT: import.meta.env.VITE_XNOBT || "",
+  xBRT: import.meta.env.VITE_XBRT || "",
+};
+
+const DG_ABI = [
+  { inputs: [{ name: "listingId", type: "uint256" }], name: "buy", outputs: [], stateMutability: "payable", type: "function" },
+  { inputs: [{ name: "listingId", type: "uint256" }, { name: "token", type: "address" }, { name: "amount", type: "uint256" }], name: "buyWithToken", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "listingId", type: "uint256" }], name: "currentPrice", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "listingCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+] as const;
 
 export default function Marketplace() {
-  const { 
-    isConnected, 
-    isCorrectChain,
-    digitalGoodsReady,
-    listItem,
-    freelancerEscrowReady,
-    createJob
-  } = useContracts();
-  const isRealAddress = (addr: string | undefined) => addr && addr !== "0x..." && addr.startsWith("0x") && addr.length === 42;
+  const { isConnected, isCorrectChain, digitalGoodsReady, digitalGoodsAddr } = useContracts();
+  const { writeContractAsync } = useWriteContract();
+  const { address } = useAccount();
+  const { data: nativeBal } = useAccount() as any;
 
-  // Contract addresses from env
-  const marketplaceCore = CONTRACT_ADDRESSES.amoy.marketplaceCore;
-  const digitalGoods = CONTRACT_ADDRESSES.amoy.digitalGoods;
-  const freelancerEscrow = CONTRACT_ADDRESSES.amoy.freelancerEscrow;
-  const digitalRWA = CONTRACT_ADDRESSES.amoy.digitalRWA;
+  const [tab, setTab] = useState<Tab>("browse");
+  const [busy, setBusy] = useState(false);
+  const [txHash, setTxHash] = useState("");
 
-  const goodsReady = isRealAddress(digitalGoods) && isCorrectChain;
-  const freelancerReady = isRealAddress(freelancerEscrow) && isCorrectChain;
-  const rwaReady = isRealAddress(digitalRWA) && isCorrectChain;
+  const [pricingMode, setPricingMode] = useState<PricingMode>("fixed");
+  const [metaURI, setMetaURI] = useState("");
+  const [fixedPrice, setFixedPrice] = useState("");
+  const [startPrice, setStartPrice] = useState("");
+  const [reservePrice, setReservePrice] = useState("");
+  const [durationHrs, setDurationHrs] = useState("24");
 
-  // Fetch goods count
-  const { data: goodsCount } = useReadContract({
-    abi: DIGITAL_GOODS_ABI,
-    address: digitalGoods as `0x${string}`,
-    functionName: "itemCount",
-    query: { enabled: Boolean(goodsReady) },
-  });
+  const [buyToken, setBuyToken] = useState<BuyToken>("native");
+  const [buyingId, setBuyingId] = useState<number | null>(null);
 
-  // Fetch jobs count
-  const { data: jobsCount } = useReadContract({
-    abi: FREELANCER_ESCROW_ABI,
-    address: freelancerEscrow as `0x${string}`,
-    functionName: "jobCount",
-    query: { enabled: Boolean(freelancerReady) },
-  });
+  const addr = digitalGoodsAddr as Address;
 
-  // State for listing form
-  const [listPrice, setListPrice] = useState("");
-  const [listTokenURI, setListTokenURI] = useState("");
-  const [isListing, setIsListing] = useState(false);
+  // ── Read listing count ──
+  const { data: countData } = useReadContracts({
+    contracts: [{ abi: DG_ABI, address: addr, functionName: "listingCount", args: [] }],
+    query: { enabled: digitalGoodsReady },
+  } as any);
+  const listingCount = countData?.[0]?.result ? Number(countData[0].result) : 0;
+  const listingIds = useMemo(() => Array.from({ length: listingCount }, (_, i) => i + 1), [listingCount]);
 
-  // State for job creation form
-  const [jobFreelancer, setJobFreelancer] = useState("");
-  const [jobAmount, setJobAmount] = useState("");
-  const [isCreatingJob, setIsCreatingJob] = useState(false);
+  // ── Read all listings + current prices in batch ──
+  const listingCalls = useMemo(() => listingIds.map(id => ({ abi: DG_ABI, address: addr, functionName: "listings", args: [BigInt(id)] })), [listingIds, addr]);
+  const priceCalls = useMemo(() => listingIds.map(id => ({ abi: DG_ABI, address: addr, functionName: "currentPrice", args: [BigInt(id)] })), [listingIds, addr]);
 
-   const handleListItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!listPrice.trim()) {
-      alert("Please enter a price");
-      return;
-    }
-    if (!listTokenURI.trim()) {
-      alert("Please enter a token URI");
-      return;
-    }
-    const priceNum = parseFloat(listPrice);
-    if (isNaN(priceNum) || priceNum <= 0) {
-      alert("Please enter a valid price greater than 0");
-      return;
-    }
-    // Basic URI validation (non-empty string)
-    if (listTokenURI.trim().length === 0) {
-      alert("Please enter a valid token URI");
-      return;
-    }
-    
-    setIsListing(true);
+  const { data: listingsRaw } = useReadContracts({ contracts: listingCalls as any, query: { enabled: listingCount > 0 } } as any);
+  const { data: pricesRaw } = useReadContracts({ contracts: priceCalls as any, query: { enabled: listingCount > 0 } } as any);
+
+  interface Listing {
+    id: bigint; seller: Address; metadataURI: string; pricing: number;
+    price: bigint; status: number; buyer: Address; escrowedAmount: bigint;
+    createdAt: bigint; disputeDeadline: bigint; deliveryConfirmed: boolean;
+    currentPrice: bigint;
+  }
+
+  const listings: Listing[] = useMemo(() => {
+    if (!listingsRaw || !pricesRaw) return [];
+    return listingIds.map((id, i) => {
+      const l = listingsRaw[i]?.result as any;
+      const p = pricesRaw[i]?.result as bigint | undefined;
+      if (!l) return null;
+      return { ...l, currentPrice: p ?? l.price };
+    }).filter(Boolean) as Listing[];
+  }, [listingsRaw, pricesRaw, listingIds]);
+
+  const active = useMemo(() => listings.filter(l => l.status === 0), [listings]);
+
+  // ── Helpers ──
+  const write = (args: any) => writeContractAsync({ ...args, abi: DG_ABI, address: addr } as any);
+
+  async function handleCreate() {
+    if (!digitalGoodsReady || busy) return;
+    setBusy(true); setTxHash("");
     try {
-      await listItem(listPrice, listTokenURI);
-      alert("Item listed successfully!");
-      // Reset form
-      setListPrice("");
-      setListTokenURI("");
-    } catch (error: any) {
-      console.error("Error listing item:", error);
-      // Handle common error cases
-      if (error.message?.includes("execution reverted")) {
-        alert("Transaction failed: " + (error.message?.includes("revert ") ? 
-          error.message.split("revert ").pop().split("(")[0].trim() : 
-          "Unknown contract error"));
-      } else {
-        alert(`Failed to list item: ${error.message || "Unknown error"}`);
-      }
-    } finally {
-      setIsListing(false);
-    }
-  };
+      const hash = pricingMode === "fixed"
+        ? await write({ functionName: "listFixed", args: [metaURI, parseUnits(fixedPrice, 18)] })
+        : await write({ functionName: "listDutch", args: [metaURI, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), BigInt(Number(durationHrs) * 3600)] });
+      setTxHash(hash);
+      setMetaURI(""); setFixedPrice(""); setStartPrice(""); setReservePrice(""); setDurationHrs("24");
+    } catch (e: any) { console.error(e); }
+    finally { setBusy(false); }
+  }
 
-   const handleCreateJob = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!jobFreelancer.trim()) {
-      alert("Please enter a freelancer address");
-      return;
-    }
-    if (!jobAmount || parseFloat(jobAmount) <= 0) {
-      alert("Please enter a valid amount greater than 0");
-      return;
-    }
-    // Basic Ethereum address validation
-    if (!/^0x[a-fA-F0-9]{40}$/.test(jobFreelancer)) {
-      alert("Please enter a valid Ethereum address");
-      return;
-    }
-    
-    setIsCreatingJob(true);
+  async function handleBuy(l: Listing) {
+    if (!digitalGoodsReady || busy) return;
+    setBusy(true); setTxHash(""); setBuyingId(Number(l.id));
     try {
-      await createJob(jobFreelancer as `0x${string}`, jobAmount);
-      alert("Job created successfully!");
-      // Reset form
-      setJobFreelancer("");
-      setJobAmount("");
-    } catch (error: any) {
-      console.error("Error creating job:", error);
-      // Handle common error cases
-      if (error.message?.includes("execution reverted")) {
-        alert("Transaction failed: " + (error.message?.includes("revert ") ? 
-          error.message.split("revert ").pop().split("(")[0].trim() : 
-          "Unknown contract error"));
+      if (buyToken === "native") {
+        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buy", args: [BigInt(l.id)], value: l.currentPrice } as any);
+        setTxHash(hash);
       } else {
-        alert(`Failed to create job: ${error.message || "Unknown error"}`);
+        const tokenAddr = TOKEN_ADDRS[buyToken] as Address;
+        if (!tokenAddr) throw new Error("Token address not configured");
+        const approve = await writeContractAsync({ abi: ERC20_ABI, address: tokenAddr, functionName: "approve", args: [addr, l.currentPrice] } as any);
+        await new Promise(r => setTimeout(r, 2000));
+        const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buyWithToken", args: [BigInt(l.id), tokenAddr, l.currentPrice] } as any);
+        setTxHash(hash);
       }
-    } finally {
-      setIsCreatingJob(false);
-    }
-  };
+    } catch (e: any) { console.error(e); }
+    finally { setBusy(false); setBuyingId(null); }
+  }
 
   if (!isConnected) {
     return (
       <section className="min-h-[calc(100vh-160px)] flex flex-col items-center justify-center px-6">
         <div className="text-center">
-          <div className="text-4xl mb-2">🏪</div>
           <p className="text-lg text-gray-500 mb-4">Connect wallet to browse marketplace</p>
           <div className="bg-gray-50 rounded-xl p-4 max-w-sm mx-auto">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent("https://testnet.trestle.website/marketplace")}&color=059669&bgcolor=ffffff&ecc=M`}
-              alt="QR"
-              className="rounded-lg mx-auto mb-2"
-            />
+            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent("https://testnet.trestle.website/marketplace")}&color=059669&bgcolor=ffffff&ecc=M`} alt="QR" className="rounded-lg mx-auto mb-2" />
             <p className="text-[10px] text-gray-400 font-medium">Scan with wallet to connect</p>
           </div>
         </div>
@@ -153,10 +134,16 @@ export default function Marketplace() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <section className="pt-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-2xl font-semibold text-gray-900 mb-6">Marketplace</h2>
+        <div className="max-w-4xl mx-auto px-4">
+          <h2 className="text-2xl font-semibold text-gray-900 text-center mb-6">Marketplace</h2>
+
+          {!digitalGoodsReady && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center mb-6">
+              <p className="text-sm text-yellow-700">Marketplace contracts not yet deployed to this network.</p>
+            </div>
+          )}
 
           {!isCorrectChain && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center mb-6">
@@ -164,127 +151,124 @@ export default function Marketplace() {
             </div>
           )}
 
-           {/* Digital Goods Section */}
-           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-             <h3 className="font-semibold text-gray-900 mb-3">Digital Goods</h3>
-             {goodsReady ? (
-               <>
-                 <div className="space-y-3">
-                   <p className="text-sm text-gray-500">Trade digital assets on the testnet marketplace.</p>
-                   <p className="text-xs text-gray-400">Contract: {digitalGoods}</p>
-                   <p className="text-xs text-gray-400">Items listed: {goodsCount?.toString() ?? "..."}</p>
-                 </div>
- 
-                   <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                     <h4 className="font-medium mb-2">List New Item</h4>
-                     <form onSubmit={handleListItem} className="space-y-3">
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Price (MATIC)</label>
-                         <input
-                           type="number"
-                           step="0.0001"
-                           min="0.0001"
-                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                           value={listPrice}
-                           onChange={(e) => setListPrice(e.target.value)}
-                           placeholder="Enter price in MATIC"
-                         />
-                       </div>
-                       <div>
-                         <label className="block text-sm font-medium text-gray-700 mb-1">Token URI</label>
-                         <input
-                           type="text"
-                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                           value={listTokenURI}
-                           onChange={(e) => setListTokenURI(e.target.value)}
-                           placeholder="Enter IPFS or metadata URL"
-                         />
-                       </div>
-                       <button
-                         type="submit"
-                         disabled={isListing}
-                         className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
-                       >
-                         {isListing ? "Listing..." : "List Item"}
-                       </button>
-                     </form>
-                   </div>
-                 </>
-             ) : (
-               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                 <p className="text-sm text-yellow-700">Digital Goods contract not deployed.</p>
-               </div>
-             )}
-           </div>
-
-           {/* Freelancer Escrow Section */}
-           <div className="bg-white rounded-xl border border-gray-200 p-6 mb-6">
-             <h3 className="font-semibold text-gray-900 mb-3">Freelancer Escrow</h3>
-             {freelancerReady ? (
-               <>
-                 <div className="space-y-3">
-                   <p className="text-sm text-gray-500">Secure freelance payments with smart contract escrow.</p>
-                   <p className="text-xs text-gray-400">Contract: {freelancerEscrow}</p>
-                   <p className="text-xs text-gray-400">Jobs created: {jobsCount?.toString() ?? "..."}</p>
-                 </div>
-
-                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                   <h4 className="font-medium mb-2">Create New Job</h4>
-                   <form onSubmit={handleCreateJob} className="space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Freelancer Address</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                          value={jobFreelancer}
-                          onChange={(e) => setJobFreelancer(e.target.value)}
-                          placeholder="0x1234567890123456789012345678901234567890"
-                        />
-                      </div>
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-1">Amount (MATIC)</label>
-                       <input
-                         type="number"
-                         step="0.0001"
-                         min="0.0001"
-                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                         value={jobAmount}
-                         onChange={(e) => setJobAmount(e.target.value)}
-                         placeholder="Enter amount in MATIC"
-                       />
-                     </div>
-                     <button
-                       type="submit"
-                       disabled={isCreatingJob}
-                       className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg transition-colors"
-                     >
-                       {isCreatingJob ? "Creating..." : "Create Job"}
-                     </button>
-                   </form>
-                 </div>
-               </>
-             ) : (
-               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                 <p className="text-sm text-yellow-700">Freelancer Escrow contract not deployed.</p>
-               </div>
-             )}
-           </div>
-
-          {/* RWA Section */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">Real World Assets</h3>
-            {rwaReady ? (
-              <div className="space-y-3">
-                <p className="text-sm text-gray-500">Tokenized real-world assets for investment.</p>
-                <p className="text-xs text-gray-400">Contract: {digitalRWA}</p>
-                <p className="text-xs text-gray-400">Use the RWA page for KYC and investment.</p>
-              </div>
-            ) : (
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                <p className="text-sm text-yellow-700">RWA contract not deployed.</p>
-              </div>
-            )}
+          {/* Tabs */}
+          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
+            <button onClick={() => setTab("browse")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === "browse" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              Browse ({active.length})
+            </button>
+            <button onClick={() => setTab("create")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === "create" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              Create Listing
+            </button>
           </div>
+
+          {txHash && (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 break-all">
+              Tx: <a href={`https://amoy.polygonscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
+            </div>
+          )}
+
+          {tab === "browse" && (
+            <>
+              {active.length === 0 ? (
+                <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+                  <p className="text-gray-400">No active listings yet — be the first!</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {active.map(l => {
+                    const isBuyingThis = buyingId === Number(l.id);
+                    return (
+                      <div key={Number(l.id)} className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition flex flex-col">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="min-w-0">
+                            <span className="text-xs text-gray-400">#{Number(l.id)}</span>
+                            <p className="text-sm font-medium text-gray-900 mt-0.5 truncate">{l.metadataURI || "Untitled"}</p>
+                          </div>
+                          <span className={`shrink-0 text-[10px] font-medium px-2 py-0.5 rounded-full ${l.pricing === 0 ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
+                            {l.pricing === 0 ? "Fixed" : "Dutch"}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-gray-500 mb-1">Seller: {l.seller.slice(0, 6)}...{l.seller.slice(-4)}</p>
+
+                        <div className="mt-auto pt-3">
+                          <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} MATIC</p>
+                          {l.pricing === 1 && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">
+                              Started {formatUnits(l.price, 18)} · Reserve {formatUnits(l.escrowedAmount || 0n, 18)}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="mt-3 space-y-2">
+                          <select value={buyToken} onChange={e => setBuyToken(e.target.value as BuyToken)} className="w-full text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-gray-50">
+                            <option value="native">MATIC</option>
+                            <option value="xGOV">xGOV</option>
+                            <option value="xNOBT">xNOBT</option>
+                            <option value="xBRT">xBRT</option>
+                          </select>
+                          <button onClick={() => handleBuy(l)} disabled={busy} className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition">
+                            {isBuyingThis ? "Processing..." : `Buy${buyToken === "native" ? " with MATIC" : " with " + buyToken.toUpperCase()}`}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {tab === "create" && (
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <div className="flex gap-2 mb-4">
+                <button onClick={() => setPricingMode("fixed")} className={`flex-1 py-2 text-sm font-medium rounded-lg border transition ${pricingMode === "fixed" ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  Fixed Price
+                </button>
+                <button onClick={() => setPricingMode("dutch")} className={`flex-1 py-2 text-sm font-medium rounded-lg border transition ${pricingMode === "dutch" ? "border-purple-500 bg-purple-50 text-purple-700" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}>
+                  Dutch Auction
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Metadata URI</label>
+                  <input value={metaURI} onChange={e => setMetaURI(e.target.value)} placeholder="ipfs://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+
+                {pricingMode === "fixed" ? (
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">Price (MATIC)</label>
+                    <input value={fixedPrice} onChange={e => setFixedPrice(e.target.value)} type="number" step="0.001" min="0" placeholder="0.0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Start Price</label>
+                        <input value={startPrice} onChange={e => setStartPrice(e.target.value)} type="number" step="0.001" min="0" placeholder="100.0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-500 mb-1">Reserve Price</label>
+                        <input value={reservePrice} onChange={e => setReservePrice(e.target.value)} type="number" step="0.001" min="0" placeholder="10.0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Duration (hours)</label>
+                      <input value={durationHrs} onChange={e => setDurationHrs(e.target.value)} type="number" min="1" placeholder="24" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                    </div>
+                    {startPrice && reservePrice && (
+                      <p className="text-xs text-gray-400">Price decays from {startPrice} → {reservePrice} MATIC over {durationHrs}h</p>
+                    )}
+                  </>
+                )}
+
+                <button onClick={handleCreate} disabled={busy || !digitalGoodsReady} className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white font-medium rounded-lg transition mt-2">
+                  {busy ? "Creating..." : `Create ${pricingMode === "fixed" ? "Fixed" : "Dutch Auction"} Listing`}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

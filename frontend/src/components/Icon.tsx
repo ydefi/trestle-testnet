@@ -1,7 +1,7 @@
-type IconName = "logo" | "spinner" | "discord" | "telegram" | "github" | "globe" | "email" | "x";
+import type { JSX } from "react";
 
-export default function Icon({ name, size = 24, className = "" }: { name: IconName; size?: number; className?: string }) {
-  const icons = {
+export default function Icon({ name, size = 24, className = "" }: { name: string; size?: number; className?: string }) {
+  const icons: Record<string, JSX.Element> = {
     logo: (
       <svg viewBox="0 0 256 256" fill="none" className={className} style={{ width: size, height: size }}>
         <defs>
@@ -14,13 +14,6 @@ export default function Icon({ name, size = 24, className = "" }: { name: IconNa
         <rect x="48" y="168" width="160" height="28" rx="6" fill="white" opacity="0.95"/>
         <rect x="72" y="120" width="112" height="24" rx="5" fill="white" opacity="0.85"/>
         <rect x="96" y="72" width="64" height="20" rx="4" fill="white" opacity="0.95"/>
-      </svg>
-    ),
-    spinner: (
-      <svg viewBox="0 0 32 32" className={className} style={{ width: size, height: size }}>
-        <circle cx="16" cy="16" r="12" fill="none" stroke="#059669" strokeWidth="3" strokeDasharray="70 30" strokeLinecap="round">
-          <animateTransform attributeName="transform" type="rotate" from="0 16 16" to="360 16 16" dur="1s" repeatCount="indefinite"/>
-        </circle>
       </svg>
     ),
     discord: (
@@ -38,22 +31,10 @@ export default function Icon({ name, size = 24, className = "" }: { name: IconNa
         <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
       </svg>
     ),
-    "globe": (
-      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <ellipse cx="12" cy="12" rx="5" ry="10" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2"/>
-      </svg>
-    ),
     email: (
       <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
         <rect x="2" y="4" width="20" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2"/>
         <path d="M22 4L12 13 2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
-    ),
-    x: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231z"/>
       </svg>
     ),
   };

@@ -1,38 +1,39 @@
-import { http, createConfig } from "wagmi";
-import { fallback } from "viem";
-import { polygonAmoy } from "wagmi/chains";
-import { walletConnect, injected } from "wagmi/connectors";
-import { authConnector } from "@web3modal/wagmi";
+import { http } from "viem";
+import { polygonAmoy } from "viem/chains";
+import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import { createAppKit } from "@reown/appkit/react";
 
 export const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
 
-// Amoy testnet RPC providers with fallback for load balancing and redundancy
-const amoyTransports = [
-  http("https://rpc-amoy.polygon.technology", { retryCount: 2, retryDelay: 1000 }),
-  http("https://polygon-amoy-bor-rpc.publicnode.com", { retryCount: 2, retryDelay: 1000 }),
-  http("https://rpc.ankr.com/polygon_amoy", { retryCount: 2, retryDelay: 1000 }),
-  ...(import.meta.env.VITE_BLOCKSCOUT_API_AMOY && import.meta.env.VITE_BLOCKSCOUT_API_KEY 
-    ? [http(`${import.meta.env.VITE_BLOCKSCOUT_API_AMOY}?apikey=${import.meta.env.VITE_BLOCKSCOUT_API_KEY}`, { retryCount: 2, retryDelay: 500 })]
-    : [])
-].filter(Boolean) as ReturnType<typeof http>[];
-
-export const config = createConfig({
-  chains: [polygonAmoy],
-  connectors: [
-    walletConnect({ projectId, showQrModal: false }),
-    injected(),
-    authConnector({
-      options: { projectId },
-      email: true,
-      socials: ["google", "github", "discord"],
-      showWallets: true,
-      walletFeatures: true,
-    }),
-  ],
+const wagmiAdapter = new WagmiAdapter({
+  projectId,
+  networks: [polygonAmoy],
   transports: {
-    [polygonAmoy.id]: fallback(amoyTransports, { rank: true }),
+    [polygonAmoy.id]: http("https://polygon-amoy.drpc.org", { retryCount: 3, retryDelay: 1000 }),
   },
-  // Configure reasonable gas prices for testnet to avoid excessive fees
-  // Polygon Amoy testnet typically has low gas prices, we'll set a conservative max
-  // 30 gwei should be plenty for testnet transactions
 });
+
+export const config = wagmiAdapter.wagmiConfig;
+
+createAppKit({
+  adapters: [wagmiAdapter],
+  projectId,
+  networks: [polygonAmoy],
+  metadata: {
+    name: "Trestle Testnet",
+    description: "Trestle DeFi Testnet Hub",
+    url: "https://testnet.trestle.website",
+    icons: ["/favicon.ico"],
+  },
+  features: {
+    email: true,
+    socials: ["google", "github", "discord"],
+  },
+  themeMode: "light",
+  themeVariables: {
+    "--w3m-color-mix": "#059669",
+    "--w3m-color-mix-strength": 20,
+  },
+});
+
+export { polygonAmoy };

@@ -2,100 +2,101 @@ const hre = require("hardhat");
 
 async function main() {
   const [deployer] = await hre.ethers.getSigners();
-  console.log("Deploying with:", deployer.address);
+  const networkName = hre.network.name;
+  const isTestnet = networkName === "amoy" || networkName === "hardhat";
+  const chainId = (await hre.ethers.provider.getNetwork()).chainId;
 
-  // Mainnet addresses
-  const HNOBT = "0xcF51ab7398315DbA6588Aa7fb3Df7c99D3D1F4dD";
-  const BROILERPLUS = "0xeCb4cAc0C9e5cBd42a9Ed36467ce8f96072AD58b";
-  const BRT_LP = "0xc445b18b3ff85e0691fe416ad91e456f8697b166";  // BRT/WMATIC QuickSwap
-  const TREASURY = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";   // Gnosis Safe
+  if (!deployer.address) {
+    console.error("No deployer address — did you set PRIVATE_KEY in the environment?");
+    process.exit(1);
+  }
 
-  // 1. Governance Token
-  const GovToken = await hre.ethers.getContractFactory("GovernanceToken");
-  const govToken = await GovToken.deploy(
-    hre.ethers.parseEther("1000000"),  // 1M max supply
-    365 * 24 * 3600                    // 1 year emission period
-  );
+  console.log("Network:", networkName, "(chainId:", chainId, ")");
+  console.log("Deploying from:", deployer.address);
+  console.log("Balance:", hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address)), "native\n");
+
+  const TREASURY = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";
+  const GOV_SUPPLY = hre.ethers.parseEther("1000000");
+
+  const deployed = {};
+
+  // 1. Mock Governance Token
+  console.log("[1/5] Deploying MockGovernanceToken...");
+  const GovToken = await hre.ethers.getContractFactory("MockGovernanceToken");
+  const govToken = await GovToken.deploy("Trestle Governance", "tGOV", 18, GOV_SUPPLY);
   await govToken.waitForDeployment();
-  console.log("GovernanceToken:", await govToken.getAddress());
+  deployed.govToken = await govToken.getAddress();
+  console.log("  ->", deployed.govToken);
 
   // 2. Fee Distributor
+  console.log("[2/5] Deploying FeeDistributor...");
   const FeeDistributor = await hre.ethers.getContractFactory("FeeDistributor");
   const feeDistributor = await FeeDistributor.deploy(TREASURY);
   await feeDistributor.waitForDeployment();
-  console.log("FeeDistributor:", await feeDistributor.getAddress());
+  deployed.feeDistributor = await feeDistributor.getAddress();
+  console.log("  ->", deployed.feeDistributor);
 
-  // 3. Tier 1 - hNOBT → BroilerPlus
-  const Tier1 = await hre.ethers.getContractFactory("Tier1Staking");
-  const tier1 = await Tier1.deploy(HNOBT, BROILERPLUS);
-  await tier1.waitForDeployment();
-  console.log("Tier1Staking:", await tier1.getAddress());
+  // 3. Digital Goods (DutchAuctionLib is internal — inlined, no linking needed)
+  console.log("[3/5] Deploying DigitalGoods...");
+  const DigitalGoods = await hre.ethers.getContractFactory("DigitalGoods");
+  const digitalGoods = await DigitalGoods.deploy();
+  await digitalGoods.waitForDeployment();
+  deployed.digitalGoods = await digitalGoods.getAddress();
+  console.log("  ->", deployed.digitalGoods);
 
-  // 4. Tier 2 - LP Staking
-  const Tier2 = await hre.ethers.getContractFactory("Tier2Staking");
-  const tier2 = await Tier2.deploy(BRT_LP, BROILERPLUS);
-  await tier2.waitForDeployment();
-  console.log("Tier2Staking:", await tier2.getAddress());
+  // 4. Freelancer Escrow (DutchAuctionLib is internal — inlined, no linking needed)
+  console.log("[4/5] Deploying FreelancerEscrow...");
+  const FreelancerEscrow = await hre.ethers.getContractFactory("FreelancerEscrow");
+  const freelancerEscrow = await FreelancerEscrow.deploy();
+  await freelancerEscrow.waitForDeployment();
+  deployed.freelancerEscrow = await freelancerEscrow.getAddress();
+  console.log("  ->", deployed.freelancerEscrow);
 
-  // 5. Tier 3 - Governor Vault
-  const Tier3 = await hre.ethers.getContractFactory("Tier3GovernorVault");
-  const tier3 = await Tier3.deploy(BRT_LP, await govToken.getAddress());
-  await tier3.waitForDeployment();
-  console.log("Tier3GovernorVault:", await tier3.getAddress());
-
-  // 6. Digital RWA (testnet - deploy once per asset)
+  // 5. Digital RWA
+  console.log("[5/5] Deploying DigitalRWA...");
   const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
   const DigitalRWA = await hre.ethers.getContractFactory("DigitalRWA");
   const digitalRWA = await DigitalRWA.deploy(
-    "Digital Asset 1", "DA1",
-    RWA_META,
-    hre.ethers.parseEther("1000000"),
-    deployer.address
+    "Trestle Real Asset 1", "TRA1",
+    RWA_META, GOV_SUPPLY, deployer.address
   );
   await digitalRWA.waitForDeployment();
-  console.log("DigitalRWA:", await digitalRWA.getAddress());
+  deployed.digitalRWA = await digitalRWA.getAddress();
+  console.log("  ->", deployed.digitalRWA);
 
-  // Configure
-  await feeDistributor.setYieldVault(await tier3.getAddress());
-  await govToken.setMinter(await tier3.getAddress());
+  // Summary
+  console.log("\n============================================");
+  console.log("Deployment Summary —", networkName);
+  console.log("============================================");
+  for (const [name, addr] of Object.entries(deployed)) {
+    console.log(`  ${name}: ${addr}`);
+  }
+  console.log("============================================");
 
-  console.log("\nDeployment complete!");
-  console.log("============");
-  console.log("GovToken:", await govToken.getAddress());
-  console.log("FeeDistributor:", await feeDistributor.getAddress());
-  console.log("Tier1Staking:", await tier1.getAddress());
-  console.log("Tier2Staking:", await tier2.getAddress());
-  console.log("Tier3Vault:", await tier3.getAddress());
-  console.log("DigitalRWA:", await digitalRWA.getAddress());
-
-  // Verify contracts (skip on local hardhat network)
-  if (hre.network.name !== "hardhat") {
-    await verify("GovernanceToken", await govToken.getAddress(), [
-      hre.ethers.parseEther("1000000"), 365 * 24 * 3600
-    ]);
-    await verify("FeeDistributor", await feeDistributor.getAddress(), [TREASURY]);
-    await verify("Tier1Staking", await tier1.getAddress(), [HNOBT, BROILERPLUS]);
-    await verify("Tier2Staking", await tier2.getAddress(), [BRT_LP, BROILERPLUS]);
-    await verify("Tier3GovernorVault", await tier3.getAddress(), [BRT_LP, await govToken.getAddress()]);
-    await verify("DigitalRWA", await digitalRWA.getAddress(), [
-      "Digital Asset 1", "DA1",
-      RWA_META,
-      hre.ethers.parseEther("1000000"),
-      deployer.address
+  // Verify on non-hardhat networks
+  if (networkName !== "hardhat") {
+    console.log("\nVerifying contracts...");
+    await verify("MockGovernanceToken", deployed.govToken, ["Trestle Governance", "tGOV", 18, GOV_SUPPLY]);
+    await verify("FeeDistributor", deployed.feeDistributor, [TREASURY]);
+    await verify("DigitalGoods", deployed.digitalGoods, []);
+    await verify("FreelancerEscrow", deployed.freelancerEscrow, []);
+    await verify("DigitalRWA", deployed.digitalRWA, [
+      "Trestle Real Asset 1", "TRA1", RWA_META, GOV_SUPPLY, deployer.address
     ]);
   }
 }
 
 async function verify(name, address, args) {
+  console.log(`  ${name}...`);
   try {
     await hre.run("verify:verify", { address, constructorArguments: args });
-    console.log(`✓ ${name} verified`);
+    console.log(`  \u2713 Verified`);
   } catch (e) {
-    console.log(`✗ ${name} skipped: ${e.message.slice(0, 80)}`);
+    console.log(`  \u2717 ${e.message.slice(0, 120)}`);
   }
 }
 
 main().catch((e) => {
-  console.error(e);
+  console.error("Fatal:", e);
   process.exit(1);
 });
