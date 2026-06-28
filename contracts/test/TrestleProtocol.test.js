@@ -115,7 +115,7 @@ describe("Testnet Contracts", function () {
   describe("DigitalGoods", function () {
     it("should list and buy a fixed-price item", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://test", price);
+      await digitalGoods.connect(seller).listFixed("ipfs://test", price, "", "");
 
       const fee = price * FEE / BPS_DENOM;
       const sellerReceives = price - fee;
@@ -129,7 +129,7 @@ describe("Testnet Contracts", function () {
 
     it("should complete delivery flow", async function () {
       const price = ethers.parseEther("5");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price);
+      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "");
       await digitalGoods.connect(buyer).buy(1, { value: price });
 
       await digitalGoods.connect(seller).submitDelivery(1, "ipfs://delivery-hash");
@@ -139,8 +139,24 @@ describe("Testnet Contracts", function () {
       expect(listing.deliveryConfirmed).to.be.true;
     });
 
+    it("should auto-deliver when deliveryURI is set", async function () {
+      const price = ethers.parseEther("3");
+      await digitalGoods.connect(seller).listFixed("ipfs://art", price, "art", "ipfs://delivery-file");
+      const prevBalance = await ethers.provider.getBalance(seller.address);
+      await digitalGoods.connect(buyer).buy(1, { value: price });
+
+      const listing = await digitalGoods.listings(1);
+      expect(listing.status).to.equal(1); // Sold
+      expect(listing.deliveryConfirmed).to.be.true;
+      expect(listing.escrowedAmount).to.equal(0n);
+      // Seller should have received payment
+      const fee = price * FEE / BPS_DENOM;
+      const sellerReceives = price - fee;
+      expect(await ethers.provider.getBalance(seller.address)).to.equal(prevBalance + sellerReceives);
+    });
+
     it("should revert if buyer underpays", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("10"));
+      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("10"), "", "");
       await expect(
         digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") })
       ).to.be.revertedWithCustomError(digitalGoods, "PriceTooLow");
@@ -151,7 +167,7 @@ describe("Testnet Contracts", function () {
       const reservePrice = ethers.parseEther("10");
       const duration = 86400;
 
-      await digitalGoods.connect(seller).listDutch("ipfs://dutch-item", startPrice, reservePrice, duration);
+      await digitalGoods.connect(seller).listDutch("ipfs://dutch-item", startPrice, reservePrice, duration, "", "");
 
       expect(await digitalGoods.currentPrice(1)).to.equal(startPrice);
 
@@ -173,7 +189,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should allow seller to cancel unpurchased listing", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://test", ethers.parseEther("10"));
+      await digitalGoods.connect(seller).listFixed("ipfs://test", ethers.parseEther("10"), "", "");
       await digitalGoods.connect(seller).cancelListing(1);
       const listing = await digitalGoods.listings(1);
       expect(listing.status).to.equal(2); // Cancelled
@@ -181,7 +197,7 @@ describe("Testnet Contracts", function () {
 
     it("should auto-resolve after dispute timeout", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price);
+      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "");
       await digitalGoods.connect(buyer).buy(1, { value: price });
       await digitalGoods.connect(seller).submitDelivery(1, "ipfs://delivery");
 
@@ -197,7 +213,7 @@ describe("Testnet Contracts", function () {
 
     it("should allow buy with ERC20 token", async function () {
       const price = ethers.parseEther("100");
-      await digitalGoods.connect(seller).listFixed("ipfs://token-item", price);
+      await digitalGoods.connect(seller).listFixed("ipfs://token-item", price, "", "");
       await mockToken.connect(deployer).mint(buyer.address, price);
       await mockToken.connect(buyer).approve(await digitalGoods.getAddress(), price);
 

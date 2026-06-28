@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import Link from "next/link";
 import Icon from "./Icon";
 
 export default function Footer() {
@@ -8,19 +8,19 @@ export default function Footer() {
         <div>
           <h3 className="text-white font-semibold mb-3">Platform</h3>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/" className="hover:text-emerald-400 transition-colors">Dashboard</Link></li>
-            <li><Link to="/marketplace" className="hover:text-emerald-400 transition-colors">Marketplace</Link></li>
-            <li><Link to="/rwa" className="hover:text-emerald-400 transition-colors">RWA</Link></li>
-            <li><a href="https://docs.trestle.website" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Docs</a></li>
+            <li><Link href="/" className="hover:text-trestle-400 transition-colors">Dashboard</Link></li>
+            <li><Link href="/marketplace" className="hover:text-trestle-400 transition-colors">Marketplace</Link></li>
+            <li><Link href="/rwa" className="hover:text-trestle-400 transition-colors">RWA</Link></li>
+            <li><a href="https://docs.trestle.website" target="_blank" rel="noopener noreferrer" className="hover:text-trestle-400 transition-colors">Docs</a></li>
           </ul>
         </div>
         <div>
           <h3 className="text-white font-semibold mb-3">App</h3>
           <ul className="space-y-2 text-sm">
-            <li><Link to="/" className="hover:text-emerald-400 transition-colors">Dashboard</Link></li>
-            <li><Link to="/marketplace" className="hover:text-emerald-400 transition-colors">Marketplace</Link></li>
-            <li><Link to="/rwa" className="hover:text-emerald-400 transition-colors">RWA</Link></li>
-            <li><a href="https://trestle-defi.github.io/trestle-whitepaper" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition-colors">Whitepaper</a></li>
+            <li><Link href="/" className="hover:text-trestle-400 transition-colors">Dashboard</Link></li>
+            <li><Link href="/marketplace" className="hover:text-trestle-400 transition-colors">Marketplace</Link></li>
+            <li><Link href="/rwa" className="hover:text-trestle-400 transition-colors">RWA</Link></li>
+            <li><a href="https://trestle-defi.github.io/trestle-whitepaper" target="_blank" rel="noopener noreferrer" className="hover:text-trestle-400 transition-colors">Whitepaper</a></li>
           </ul>
         </div>
         <div className="col-span-2 md:col-span-1">

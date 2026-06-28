@@ -42,13 +42,29 @@ const RWA_ABI = [
   { inputs: [{ name: "account", type: "address" }, { name: "status", type: "bool" }], name: "setWhitelist", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "assetInfo", outputs: [{ name: "name", type: "string" }, { name: "description", type: "string" }, { name: "lockupDuration", type: "uint256" }, { name: "expectedReturnBps", type: "uint256" }, { name: "underlyingAsset", type: "string" }, { name: "redemptionDate", type: "uint256" }, { name: "redemptionPrice", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "cap", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "owner", outputs: [{ name: "", type: "address" }], stateMutability: "view", type: "function" },
+  { inputs: [], name: "subscribe", outputs: [], stateMutability: "payable", type: "function" },
+] as const;
+
+const USER_PROFILE_ABI = [
+  { inputs: [{ name: "_name", type: "string" }, { name: "_avatarURI", type: "string" }, { name: "_bio", type: "string" }], name: "setProfile", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "_user", type: "address" }, { name: "_rating", type: "uint8" }, { name: "_comment", type: "string" }], name: "submitReview", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "_user", type: "address" }], name: "getProfile", outputs: [{ name: "name", type: "string" }, { name: "avatarURI", type: "string" }, { name: "bio", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "_user", type: "address" }], name: "getReviewCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "_user", type: "address" }, { name: "_offset", type: "uint256" }, { name: "_limit", type: "uint256" }], name: "getReviews", outputs: [{ name: "", type: "tuple[]", components: [{ name: "rating", type: "uint8" }, { name: "comment", type: "string" }, { name: "timestamp", type: "uint256" }] }], stateMutability: "view", type: "function" },
 ] as const;
 
 const PLACEHOLDER = "0x...";
 const isReal = (a: string) => a !== PLACEHOLDER && !a.startsWith("0x0000");
 
-const A = (key: string): Address =>
-  (import.meta.env[`VITE_${key}`] as Address) ?? PLACEHOLDER as Address;
+const ENV = {
+  digitalGoods: process.env.NEXT_PUBLIC_DIGITAL_GOODS ?? PLACEHOLDER,
+  freelancerEscrow: process.env.NEXT_PUBLIC_FREELANCER_ESCROW ?? PLACEHOLDER,
+  digitalRWA: process.env.NEXT_PUBLIC_DIGITAL_RWA ?? PLACEHOLDER,
+  govToken: process.env.NEXT_PUBLIC_GOV_TOKEN ?? PLACEHOLDER,
+  feeDistributor: process.env.NEXT_PUBLIC_FEE_DISTRIBUTOR ?? PLACEHOLDER,
+  userProfile: process.env.NEXT_PUBLIC_USER_PROFILE ?? PLACEHOLDER,
+} as Record<string, string>;
 
 export function useContracts() {
   const { address, isConnected, connector } = useAccount();
@@ -59,11 +75,17 @@ export function useContracts() {
   const chainName = chainId === CHAIN_CONFIG.amoy.id ? CHAIN_CONFIG.amoy.name : "Unsupported";
 
   // contract addresses (from .env)
-  const digitalGoods = A("DIGITAL_GOODS");
-  const freelancerEscrow = A("FREELANCER_ESCROW");
-  const digitalRWA = A("DIGITAL_RWA");
-  const govToken = A("GOV_TOKEN");
-  const feeDistributor = A("FEE_DISTRIBUTOR");
+  const digitalGoods = ENV.digitalGoods as Address;
+  const freelancerEscrow = ENV.freelancerEscrow as Address;
+  const digitalRWA = ENV.digitalRWA as Address;
+  const govToken = ENV.govToken as Address;
+  const feeDistributor = ENV.feeDistributor as Address;
+  const userProfile = ENV.userProfile as Address;
+
+  if (typeof window !== "undefined") {
+    console.debug("[useContracts] chainId=%s chainName=%s isCorrectChain=%s digitalGoods=%s isReal=%s",
+      chainId, chainName, isCorrectChain, digitalGoods, isReal(digitalGoods));
+  }
 
   const { writeContractAsync } = useWriteContract();
   const write = (payload: Parameters<typeof writeContractAsync>[0]) =>
@@ -74,6 +96,7 @@ export function useContracts() {
     isConnected,
     connector,
     isCorrectChain,
+    chainId,
     chainName,
     balance: isCorrectChain && native ? formatUnits(native.value, native.decimals) : "0",
 
@@ -117,5 +140,14 @@ export function useContracts() {
       write({ abi: RWA_ABI, address: digitalRWA, functionName: "mint", args: [to, parseUnits(amount, 18)] } as any),
     setWhitelist: (account: Address, status: boolean) =>
       write({ abi: RWA_ABI, address: digitalRWA, functionName: "setWhitelist", args: [account, status] } as any),
+
+    // User Profile
+    userProfileReady: isReal(userProfile) && isCorrectChain,
+    userProfileAddr: userProfile,
+    userProfileABI: USER_PROFILE_ABI,
+    setProfile: (name: string, avatarURI: string, bio: string) =>
+      write({ abi: USER_PROFILE_ABI, address: userProfile, functionName: "setProfile", args: [name, avatarURI, bio] } as any),
+    submitReview: (user: Address, rating: number, comment: string) =>
+      write({ abi: USER_PROFILE_ABI, address: userProfile, functionName: "submitReview", args: [user, rating, comment] } as any),
   };
 }

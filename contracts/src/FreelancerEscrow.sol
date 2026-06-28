@@ -54,6 +54,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256 escrowedAmount;
         uint256 disputeDeadline;
         uint256 createdAt;
+        address paymentToken;
     }
 
     uint256 public projectCount;
@@ -89,6 +90,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     error AlreadyAccepted();
     error NoFunds();
     error PastDeadline();
+    error MixedPayment();
 
     modifier onlyClient(uint256 _id) {
         if (msg.sender != projects[_id].client) revert NotClient();
@@ -101,6 +103,16 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     }
 
     constructor() Ownable(msg.sender) {}
+
+    function _send(address _token, address _to, uint256 _amount) private {
+        if (_amount == 0) return;
+        if (_token == address(0)) {
+            (bool s,) = _to.call{value: _amount}("");
+            require(s, "Transfer failed");
+        } else {
+            IERC20(_token).safeTransfer(_to, _amount);
+        }
+    }
 
     function createProjectFixed(
         string calldata _title,
@@ -260,6 +272,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.totalBudget = g.price;
         p.status = ProjectStatus.InProgress;
         p.escrowedAmount = g.price;
+        p.paymentToken = address(0);
         p.createdAt = block.timestamp;
 
         uint256 mlen = g.milestones.length;
@@ -298,8 +311,10 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     function fundProject(uint256 _id) external payable nonReentrant onlyClient(_id) {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Open) revert WrongStatus();
+        if (p.escrowedAmount > 0 && p.paymentToken != address(0)) revert MixedPayment();
         uint256 budget = currentBudget(_id);
         if (msg.value < budget) revert BudgetTooLow();
+        p.paymentToken = address(0);
         p.escrowedAmount += budget;
         uint256 excess = msg.value - budget;
         if (excess > 0) {
@@ -311,9 +326,11 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     function fundProjectWithToken(uint256 _id, address _token, uint256 _amount) external nonReentrant onlyClient(_id) {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Open) revert WrongStatus();
+        if (p.escrowedAmount > 0 && p.paymentToken != _token) revert MixedPayment();
         uint256 budget = currentBudget(_id);
         if (_amount < budget) revert BudgetTooLow();
         IERC20(_token).safeTransferFrom(msg.sender, address(this), budget);
+        p.paymentToken = _token;
         p.escrowedAmount += budget;
         if (_amount > budget) {
             IERC20(_token).safeTransfer(msg.sender, _amount - budget);
@@ -371,12 +388,8 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.escrowedAmount -= amount;
         uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
         uint256 netAmount = amount - fee;
-        if (fee > 0) {
-            (bool feeSent,) = owner().call{value: fee}("");
-            require(feeSent, "Fee transfer failed");
-        }
-        (bool sent,) = p.freelancer.call{value: netAmount}("");
-        require(sent, "Payment failed");
+        _send(p.paymentToken, owner(), fee);
+        _send(p.paymentToken, p.freelancer, netAmount);
 
         emit MilestoneApproved(_id, _milestoneIndex, amount);
 
@@ -392,8 +405,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
             if (p.escrowedAmount > 0) {
                 uint256 remaining = p.escrowedAmount;
                 p.escrowedAmount = 0;
-                (bool bonus,) = p.freelancer.call{value: remaining}("");
-                require(bonus, "Bonus failed");
+                _send(p.paymentToken, p.freelancer, remaining);
             }
             emit ProjectCompleted(_id);
         }
@@ -423,12 +435,8 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.escrowedAmount -= amount;
         uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
         uint256 netAmount = amount - fee;
-        if (fee > 0) {
-            (bool feeSent,) = owner().call{value: fee}("");
-            require(feeSent, "Fee transfer failed");
-        }
-        (bool sent,) = p.freelancer.call{value: netAmount}("");
-        require(sent, "Payment failed");
+        _send(p.paymentToken, owner(), fee);
+        _send(p.paymentToken, p.freelancer, netAmount);
 
         emit MilestoneApproved(_id, _milestoneIndex, amount);
     }
@@ -452,8 +460,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.escrowedAmount = 0;
         address recipient = _toFreelancer ? p.freelancer : p.client;
         if (amount > 0) {
-            (bool sent,) = recipient.call{value: amount}("");
-            require(sent, "Transfer failed");
+            _send(p.paymentToken, recipient, amount);
         }
         emit Resolved(_id, _toFreelancer);
     }
@@ -475,12 +482,10 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.escrowedAmount = 0;
 
         if (approvedCount > p.milestones.length / 2) {
-            (bool sent,) = p.freelancer.call{value: amount}("");
-            require(sent, "Transfer failed");
+            _send(p.paymentToken, p.freelancer, amount);
             emit Resolved(_id, true);
         } else {
-            (bool sent,) = p.client.call{value: amount}("");
-            require(sent, "Transfer failed");
+            _send(p.paymentToken, p.client, amount);
             emit Resolved(_id, false);
         }
     }
@@ -493,8 +498,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256 amount = p.escrowedAmount;
         p.escrowedAmount = 0;
         if (amount > 0) {
-            (bool sent,) = msg.sender.call{value: amount}("");
-            require(sent, "Refund failed");
+            _send(p.paymentToken, msg.sender, amount);
         }
         emit Cancelled(_id);
     }

@@ -1,4 +1,4 @@
-const AI_API = import.meta.env.VITE_AI_API_URL ?? "https://ai.trestle.website";
+const AI_API = process.env.NEXT_PUBLIC_AI_API_URL ?? "https://ai.trestle.website";
 
 type JonahContext = Record<string, string>;
 

@@ -3,7 +3,7 @@ import { polygonAmoy } from "viem/chains";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { createAppKit } from "@reown/appkit/react";
 
-export const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
+export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
@@ -23,7 +23,7 @@ createAppKit({
     name: "Trestle Testnet",
     description: "Trestle DeFi Testnet Hub",
     url: "https://testnet.trestle.website",
-    icons: ["/favicon.ico"],
+    icons: ["/favicon.svg"],
   },
   features: {
     email: true,

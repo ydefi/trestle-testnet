@@ -51,6 +51,13 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
         _mint(_to, _amount);
     }
 
+    function subscribe() external payable nonReentrant {
+        require(msg.value > 0, "Send MATIC");
+        require(whitelisted[msg.sender], "Not whitelisted");
+        require(totalSupply() + msg.value <= cap, "Cap exceeded");
+        _mint(msg.sender, msg.value);
+    }
+
     function setWhitelist(address _account, bool _status) external onlyRole(DEFAULT_ADMIN_ROLE) {
         require(_account != address(0), "Zero address");
         whitelisted[_account] = _status;

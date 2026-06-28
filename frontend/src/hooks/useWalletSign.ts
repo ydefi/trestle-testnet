@@ -1,13 +1,19 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 import { useAccount, useSignMessage } from "wagmi";
 
 export function useWalletSign() {
   const { address, isConnected } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const signedFor = useRef<string | null>(sessionStorage.getItem("trestle_signed_for"));
+  const signedFor = useRef<string | null>(null);
   const signingFor = useRef<string | null>(null);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (signedFor.current === null) {
+      signedFor.current = sessionStorage.getItem("trestle_signed_for");
+    }
     if (isConnected && address && address !== signedFor.current && address !== signingFor.current) {
       signingFor.current = address;
       signMessageAsync({
