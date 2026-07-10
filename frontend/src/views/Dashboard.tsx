@@ -1,9 +1,35 @@
+import { useState, useEffect } from "react";
 import { useContracts } from "../hooks/useContracts";
 import LoadingSpinner from "../components/LoadingSpinner";
 import QRIcon from "../components/QRIcon";
+import { formatUnits } from "viem";
+import { getTransactions, getAddressInfo, explorerTxUrl, type BlockscoutTx, type BlockscoutAddress } from "../lib/blockscout";
 
 export default function Dashboard() {
   const { address, balance } = useContracts();
+  const [txs, setTxs] = useState<BlockscoutTx[] | null>(null);
+  const [addrInfo, setAddrInfo] = useState<BlockscoutAddress | null>(null);
+  const [bsLoading, setBsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!address) { setTxs(null); setAddrInfo(null); return; }
+    setBsLoading(true);
+    Promise.all([getTransactions(address), getAddressInfo(address)]).then(([txData, addrData]) => {
+      setTxs(txData);
+      setAddrInfo(addrData);
+      setBsLoading(false);
+    });
+  }, [address]);
+
+  const otherTokens = addrInfo?.token_balances?.filter(t => t.token.symbol !== "MATIC") ?? [];
+
+  function ago(ts: string) {
+    const sec = (Date.now() - new Date(ts).getTime()) / 1000;
+    if (sec < 60) return `${Math.floor(sec)}s ago`;
+    if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+    if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+    return `${Math.floor(sec / 86400)}d ago`;
+  }
 
   return (
     <div className="space-y-12">
@@ -55,6 +81,55 @@ export default function Dashboard() {
           )}
         </div>
       </div>
+
+      {/* Token Balances from Blockscout */}
+      {otherTokens.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Token Balances</h3>
+          <div className="space-y-2">
+            {otherTokens.map((t, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <span className="text-gray-600">{t.token.name} ({t.token.symbol})</span>
+                <span className="font-medium text-gray-900">
+                  {formatUnits(BigInt(t.value), Number(t.token.decimals || 18))}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Transactions from Blockscout */}
+      {address && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Recent Transactions</h3>
+            {bsLoading && <span className="text-xs text-gray-400">Loading...</span>}
+          </div>
+          {txs === null && !bsLoading ? (
+            <p className="text-xs text-gray-400 italic">Could not fetch transactions from Blockscout.</p>
+          ) : txs && txs.length > 0 ? (
+            <div className="space-y-2">
+              {txs.map((tx, i) => {
+                const isOut = tx.from.hash.toLowerCase() === address?.toLowerCase();
+                const icon = tx.status === "ok" ? (isOut ? "↑" : "↓") : "✗";
+                const color = tx.status === "ok" ? (isOut ? "text-red-500" : "text-emerald-500") : "text-red-600";
+                return (
+                  <a key={i} href={explorerTxUrl(tx.hash)} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-3 text-xs text-gray-600 hover:bg-gray-50 rounded-lg px-2 py-1.5 transition">
+                    <span className={`font-mono text-sm ${color}`}>{icon}</span>
+                    <span className="font-mono flex-1">{tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}</span>
+                    <span className="text-gray-400">{ago(tx.timestamp)}</span>
+                    {tx.method && <span className="text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded text-[10px]">{tx.method}</span>}
+                  </a>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 italic">No transactions yet.</p>
+          )}
+        </div>
+      )}
 
       {/* QR for mobile access */}
       <div className="flex justify-center">

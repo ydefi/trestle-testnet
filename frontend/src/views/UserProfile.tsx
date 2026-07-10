@@ -35,7 +35,7 @@ export default function UserProfilePage() {
   });
 
   // Read looked-up profile
-  const { data: lookupProfile, refetch: refetchLookup } = useReadContracts({
+  const { data: lookupProfile } = useReadContracts({
     contracts: lookupTarget && userProfileReady ? [
       { abi: userProfileABI, address: userProfileAddr, functionName: "getProfile", args: [lookupTarget] },
       { abi: userProfileABI, address: userProfileAddr, functionName: "getReviewCount", args: [lookupTarget] },
@@ -60,7 +60,6 @@ export default function UserProfilePage() {
   const handleLookup = () => {
     if (!lookupAddr.trim()) return;
     setLookupTarget(lookupAddr.trim() as Address);
-    setTimeout(() => refetchLookup(), 100);
   };
 
   const handleReview = async () => {

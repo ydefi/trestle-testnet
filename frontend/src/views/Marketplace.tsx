@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { useAccount } from "wagmi";
 import { useReadContracts, useWriteContract } from "wagmi";
+import { getPublicClient } from 'wagmi/actions';
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useContracts } from "../hooks/useContracts";
+import { config } from "../config/web3";
+import Freelance from "./Freelance";
 
-type Tab = "browse" | "create";
+type Tab = "browse" | "create" | "freelance";
 type PricingMode = "fixed" | "dutch";
 type BuyToken = "native" | "xGOV" | "xNOBT" | "xBRT" | "USDC" | "USDT";
 
@@ -25,7 +28,7 @@ const DG_ABI = [
   { inputs: [{ name: "listingId", type: "uint256" }, { name: "token", type: "address" }, { name: "amount", type: "uint256" }], name: "buyWithToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "listingId", type: "uint256" }], name: "currentPrice", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "listingCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
 ] as const;
@@ -117,6 +120,8 @@ export default function Marketplace() {
       const hash = pricingMode === "fixed"
         ? await write({ functionName: "listFixed", args: [metaURI, parseUnits(fixedPrice, 18), category, deliveryURI] })
         : await write({ functionName: "listDutch", args: [metaURI, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), BigInt(Number(durationHrs) * 3600), category, deliveryURI] });
+      const publicClient = getPublicClient(config)!;
+      await publicClient.waitForTransactionReceipt({ hash });
       setTxHash(hash);
       setMetaURI(""); setCategory("art"); setDeliveryURI(""); setFixedPrice(""); setStartPrice(""); setReservePrice(""); setDurationHrs("24");
     } catch (e: any) { console.error(e); }
@@ -127,15 +132,18 @@ export default function Marketplace() {
     if (!digitalGoodsReady || busy) return;
     setBusy(true); setTxHash(""); setBuyingId(Number(l.id));
     try {
+      const publicClient = getPublicClient(config)!;
       if (buyToken === "native") {
         const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buy", args: [BigInt(l.id)], value: l.currentPrice, connector } as any);
+        await publicClient.waitForTransactionReceipt({ hash });
         setTxHash(hash);
       } else {
         const tokenAddr = TOKEN_ADDRS[buyToken] as Address;
         if (!tokenAddr) throw new Error("Token address not configured");
-        const approve = await writeContractAsync({ abi: ERC20_ABI, address: tokenAddr, functionName: "approve", args: [addr, l.currentPrice], connector } as any);
-        await new Promise(r => setTimeout(r, 2000));
+        const approveHash = await writeContractAsync({ abi: ERC20_ABI, address: tokenAddr, functionName: "approve", args: [addr, l.currentPrice], connector } as any);
+        await publicClient.waitForTransactionReceipt({ hash: approveHash });
         const hash = await writeContractAsync({ abi: DG_ABI, address: addr, functionName: "buyWithToken", args: [BigInt(l.id), tokenAddr, l.currentPrice], connector } as any);
+        await publicClient.waitForTransactionReceipt({ hash });
         setTxHash(hash);
       }
     } catch (e: any) { console.error(e); }
@@ -162,6 +170,12 @@ export default function Marketplace() {
         <div className="max-w-4xl mx-auto px-4">
           <h2 className="text-2xl font-semibold text-gray-900 text-center mb-6">Marketplace</h2>
 
+          {/* walkthrough */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-sm text-blue-800 leading-relaxed">
+            <strong>Guide:</strong> Browse and buy <strong>digital goods</strong> (fixed or Dutch auction).
+            Use the <strong>Freelance</strong> tab to post gigs or projects with milestone-based escrow.
+          </div>
+
           {!isCorrectChain && !isConnected && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 text-center mb-6">
               <p className="text-sm text-blue-700">Connect wallet and switch to Polygon Amoy to interact with the marketplace.</p>
@@ -181,10 +195,13 @@ export default function Marketplace() {
           {/* Tabs */}
           <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6">
             <button onClick={() => setTab("browse")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === "browse" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
-              Browse ({active.length})
+              Digital Goods ({active.length})
             </button>
             <button onClick={() => setTab("create")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === "create" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
               Create Listing
+            </button>
+            <button onClick={() => setTab("freelance")} className={`flex-1 py-2 text-sm font-medium rounded-lg transition ${tab === "freelance" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500 hover:text-gray-700"}`}>
+              Freelance
             </button>
           </div>
 
@@ -231,7 +248,7 @@ export default function Marketplace() {
                         </div>
                         <p className="text-xs text-gray-500 mb-1">Seller: {l.seller.slice(0, 6)}...{l.seller.slice(-4)}</p>
                         <div className="mt-auto pt-3">
-                          <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} MATIC</p>
+                          <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} {buyToken === "native" ? "MATIC" : buyToken.toUpperCase()}</p>
                           {l.pricing === 1 && (
                             <p className="text-[10px] text-gray-400 mt-0.5">
                               Started {formatUnits(l.price, 18)} · Reserve {formatUnits(l.escrowedAmount || 0n, 18)}
@@ -277,7 +294,7 @@ export default function Marketplace() {
                         </div>
                         <p className="text-xs text-gray-500 mb-1">Seller: {l.seller.slice(0, 6)}...{l.seller.slice(-4)}</p>
                         <div className="mt-auto pt-3">
-                          <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} MATIC</p>
+                          <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} {buyToken === "native" ? "MATIC" : buyToken.toUpperCase()}</p>
                           {l.pricing === 1 && (
                             <p className="text-[10px] text-gray-400 mt-0.5">
                               Started {formatUnits(l.price, 18)} · Reserve {formatUnits(l.escrowedAmount || 0n, 18)}
@@ -372,6 +389,10 @@ export default function Marketplace() {
                 </button>
               </div>
             </div>
+          )}
+
+          {tab === "freelance" && (
+            <Freelance />
           )}
         </div>
       </section>

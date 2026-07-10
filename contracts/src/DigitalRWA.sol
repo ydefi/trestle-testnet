@@ -47,6 +47,7 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
 
     function mint(address _to, uint256 _amount) external onlyRole(MINTER_ROLE) nonReentrant {
         require(_to != address(0) && _amount > 0, "Invalid");
+        require(whitelisted[_to], "Recipient not whitelisted");
         require(totalSupply() + _amount <= cap, "Cap exceeded");
         _mint(_to, _amount);
     }

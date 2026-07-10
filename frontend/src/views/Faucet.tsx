@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useReadContracts, useWriteContract } from "wagmi";
+import { getPublicClient } from "wagmi/actions";
 import { formatUnits, parseUnits, type Address } from "viem";
+import { config } from "../config/web3";
 
 const ERC20_ABI = [
   { inputs: [{ name: "account", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
@@ -34,8 +36,10 @@ export default function Faucet() {
     setBusy(token.id); setTxHash("");
     try {
       const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, MINT_AMOUNT], connector } as any);
+      const publicClient = getPublicClient(config)!;
+      await publicClient.waitForTransactionReceipt({ hash });
       setTxHash(hash);
-      setTimeout(refetch, 2000);
+      await refetch();
     } catch (e: any) { console.error(e); }
     finally { setBusy(null); }
   }

@@ -311,11 +311,11 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     function fundProject(uint256 _id) external payable nonReentrant onlyClient(_id) {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Open) revert WrongStatus();
-        if (p.escrowedAmount > 0 && p.paymentToken != address(0)) revert MixedPayment();
+        if (p.escrowedAmount > 0) revert MixedPayment();
         uint256 budget = currentBudget(_id);
         if (msg.value < budget) revert BudgetTooLow();
         p.paymentToken = address(0);
-        p.escrowedAmount += budget;
+        p.escrowedAmount = budget;
         uint256 excess = msg.value - budget;
         if (excess > 0) {
             (bool refund,) = msg.sender.call{value: excess}("");
@@ -326,12 +326,12 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     function fundProjectWithToken(uint256 _id, address _token, uint256 _amount) external nonReentrant onlyClient(_id) {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Open) revert WrongStatus();
-        if (p.escrowedAmount > 0 && p.paymentToken != _token) revert MixedPayment();
+        if (p.escrowedAmount > 0) revert MixedPayment();
         uint256 budget = currentBudget(_id);
         if (_amount < budget) revert BudgetTooLow();
         IERC20(_token).safeTransferFrom(msg.sender, address(this), budget);
         p.paymentToken = _token;
-        p.escrowedAmount += budget;
+        p.escrowedAmount = budget;
         if (_amount > budget) {
             IERC20(_token).safeTransfer(msg.sender, _amount - budget);
         }
@@ -376,7 +376,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
 
     function approveMilestone(uint256 _id, uint256 _milestoneIndex) external onlyClient(_id) nonReentrant {
         Project storage p = projects[_id];
-        if (p.status != ProjectStatus.InProgress && p.status != ProjectStatus.Open) revert WrongStatus();
+        if (p.status != ProjectStatus.InProgress) revert WrongStatus();
         if (_milestoneIndex >= p.milestones.length) revert WrongMilestone();
         Milestone storage m = p.milestones[_milestoneIndex];
         if (m.status != MilestoneStatus.Submitted) revert WrongMilestone();
@@ -439,6 +439,23 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         _send(p.paymentToken, p.freelancer, netAmount);
 
         emit MilestoneApproved(_id, _milestoneIndex, amount);
+
+        bool allDone = true;
+        for (uint256 i; i < p.milestones.length; i++) {
+            if (p.milestones[i].status != MilestoneStatus.Approved) {
+                allDone = false;
+                break;
+            }
+        }
+        if (allDone) {
+            p.status = ProjectStatus.Completed;
+            if (p.escrowedAmount > 0) {
+                uint256 remaining = p.escrowedAmount;
+                p.escrowedAmount = 0;
+                _send(p.paymentToken, p.freelancer, remaining);
+            }
+            emit ProjectCompleted(_id);
+        }
     }
 
     function disputeProject(uint256 _id) external {

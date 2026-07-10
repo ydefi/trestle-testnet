@@ -1,10 +1,10 @@
 const hre = require("hardhat");
 const { ethers } = hre;
 
-// Deployed contract addresses (Amoy, 2026-06-28)
-const DIGITAL_GOODS = "0x7928BE357160d31B6ab378D0566Ce360BE0228B0";
-const DIGITAL_RWA = "0xf22e65B24B3236B6B4983e81792541139Df6e3Dc";
-const USER_PROFILE = "0x9F52847AFaaB2504c560bC6c098b3D81772fa8C6";
+// Deployed contract addresses (Amoy, 2026-06-29 — audit fix deploy)
+const DIGITAL_GOODS = "0xfe50dA41BfC13e99E9276149D0b534609C39633E";
+const DIGITAL_RWA = "0x18dF08d96F303c6149a7f8CC4800BCa7fcAEB0Fd";
+const USER_PROFILE = "0x4cEaa30839E3E463484c2D66900fdD6484022054";
 
 const TEST_FUND = ethers.parseEther("0.06");   // MATIC sent to test user for gas + subscribe
 const SUBSCRIBE_AMOUNT = ethers.parseEther("0.02"); // MATIC to subscribe (buys 0.02 DA1)

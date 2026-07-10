@@ -16,8 +16,16 @@ const EXAMPLE_INFO = {
 function parseAssetInfo(raw: unknown): typeof EXAMPLE_INFO | undefined {
   if (!raw || typeof raw !== "object") return undefined;
   const r = raw as Record<string, unknown>;
-  if (typeof r.name !== "string") return undefined;
-  return r as typeof EXAMPLE_INFO;
+  if (typeof r.name !== "string" || typeof r.description !== "string") return undefined;
+  return {
+    name: typeof r.name === "string" ? r.name : "",
+    description: typeof r.description === "string" ? r.description : "",
+    lockupDuration: typeof r.lockupDuration === "bigint" ? r.lockupDuration : typeof r.lockupDuration === "number" ? BigInt(r.lockupDuration) : 0n,
+    expectedReturnBps: typeof r.expectedReturnBps === "bigint" ? r.expectedReturnBps : typeof r.expectedReturnBps === "number" ? BigInt(r.expectedReturnBps) : 0n,
+    underlyingAsset: typeof r.underlyingAsset === "string" ? r.underlyingAsset : "",
+    redemptionDate: typeof r.redemptionDate === "bigint" ? r.redemptionDate : typeof r.redemptionDate === "number" ? BigInt(r.redemptionDate) : 0n,
+    redemptionPrice: typeof r.redemptionPrice === "bigint" ? r.redemptionPrice : typeof r.redemptionPrice === "number" ? BigInt(r.redemptionPrice) : 0n,
+  };
 }
 
 export default function RWA() {
@@ -89,6 +97,7 @@ export default function RWA() {
     finally { setBusy(false); }
   }
 
+
   if (!isConnected) {
     return (
       <div className="text-center py-12">
@@ -104,12 +113,14 @@ export default function RWA() {
       <h2 className="text-xl font-semibold">Real World Assets (RWA)</h2>
       <p className="text-sm text-gray-500">Tokenized real-world assets require KYC verification.</p>
 
-      {!isConnected && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-          <p className="text-sm text-blue-700">Connect wallet to Polygon Amoy to interact with RWA contracts.</p>
-        </div>
-      )}
-      {isConnected && !rwaReady && (
+      {/* walkthrough */}
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 leading-relaxed">
+        <strong>RWA Guide:</strong> Assets are whitelist-gated for compliance. Contact an admin to get your address
+        whitelisted, then use <strong>Subscribe</strong> to mint DA1 tokens by sending MATIC.
+        Token holders earn yield and can redeem at the redemption date.
+      </div>
+
+      {!rwaReady && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-center">
           <p className="text-sm text-yellow-700">RWA contract not deployed or wrong chain — check <strong>NEXT_PUBLIC_DIGITAL_RWA</strong> and switch to Amoy.</p>
         </div>
@@ -158,6 +169,18 @@ export default function RWA() {
             <button onClick={handleSubscribe} disabled={busy || !rwaReady} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition">
               {busy ? "..." : "Buy DA1"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* not whitelisted */}
+      {rwaReady && whitelisted !== true && !isAdmin && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4 text-center">
+          <h3 className="font-semibold text-gray-900">Access Required</h3>
+          <p className="text-sm text-gray-600">RWA is whitelist-gated for regulatory compliance. Contact an admin to get your address whitelisted.</p>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <p className="text-xs text-gray-400 mb-1">Your Address</p>
+            <p className="text-sm font-mono text-gray-700 break-all">{address}</p>
           </div>
         </div>
       )}

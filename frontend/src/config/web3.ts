@@ -1,15 +1,22 @@
-import { http } from "viem";
+import { http, fallback } from "viem";
 import { polygonAmoy } from "viem/chains";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { createAppKit } from "@reown/appkit/react";
 
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
 
+const RPC_LIST = [
+  "https://polygon-amoy.drpc.org",
+  "https://rpc-amoy.polygon.technology/",
+  "https://amoy.blockscout.com/rpc",
+  "https://polygon-amoy.blockpi.network/v1/rpc/public",
+];
+
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks: [polygonAmoy],
   transports: {
-    [polygonAmoy.id]: http("https://polygon-amoy.drpc.org", { retryCount: 3, retryDelay: 1000 }),
+    [polygonAmoy.id]: fallback(RPC_LIST.map(url => http(url, { retryCount: 3, retryDelay: 1000 }))),
   },
 });
 

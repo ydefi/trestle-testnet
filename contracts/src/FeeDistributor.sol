@@ -49,7 +49,7 @@ contract FeeDistributor is Ownable {
     }
 
     function setSplitBps(uint256 _yieldBps, uint256 _treasuryBps) external onlyOwner {
-        require(_yieldBps + _treasuryBps < BPS, "Split overflow");
+        require(_yieldBps + _treasuryBps <= BPS, "Split overflow");
         yieldBps = _yieldBps;
         treasuryBps = _treasuryBps;
         emit ConfigUpdated("split");

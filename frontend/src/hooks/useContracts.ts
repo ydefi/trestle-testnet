@@ -15,13 +15,13 @@ const DIGITAL_GOODS_ABI = [
   { inputs: [{ name: "listingId", type: "uint256" }, { name: "token", type: "address" }, { name: "amount", type: "uint256" }], name: "buyWithToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "listingId", type: "uint256" }], name: "currentPrice", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "listingCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
 ] as const;
 
 const FREELANCER_ESCROW_ABI = [
-  { inputs: [{ name: "projectId", type: "uint256" }], name: "projects", outputs: [{ name: "client", type: "address" }, { name: "freelancer", type: "address" }, { name: "status", type: "uint8" }, { name: "totalBudget", type: "uint256" }, { name: "escrowedAmount", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "projectId", type: "uint256" }], name: "projects", outputs: [{ name: "client", type: "address" }, { name: "freelancer", type: "address" }, { name: "status", type: "uint8" }, { name: "totalBudget", type: "uint256" }, { name: "escrowedAmount", type: "uint256" }, { name: "paymentToken", type: "address" }, { name: "title", type: "string" }, { name: "descriptionURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "disputeDeadline", type: "uint256" }, { name: "createdAt", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "projectCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "", type: "uint256" }], name: "gigs", outputs: [{ name: "id", type: "uint256" }, { name: "freelancer", type: "address" }, { name: "title", type: "string" }, { name: "descriptionURI", type: "string" }, { name: "price", type: "uint256" }, { name: "active", type: "bool" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "gigCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
@@ -106,10 +106,10 @@ export function useContracts() {
     digitalGoodsABI: DIGITAL_GOODS_ABI,
     buyListing: (id: number, value: string) =>
       write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "buy", args: [BigInt(id)], value: parseUnits(value, 18) } as any),
-    listFixed: (metadataURI: string, price: string) =>
-      write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "listFixed", args: [metadataURI, parseUnits(price, 18)] } as any),
-    listDutch: (metadataURI: string, startPrice: string, reservePrice: string, durationSec: bigint) =>
-      write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "listDutch", args: [metadataURI, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), durationSec] } as any),
+    listFixed: (metadataURI: string, price: string, category: string, deliveryURI: string) =>
+      write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "listFixed", args: [metadataURI, parseUnits(price, 18), category, deliveryURI] } as any),
+    listDutch: (metadataURI: string, startPrice: string, reservePrice: string, durationSec: bigint, category: string, deliveryURI: string) =>
+      write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "listDutch", args: [metadataURI, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), durationSec, category, deliveryURI] } as any),
     buyWithTokenListing: (id: number, token: Address, amount: string) =>
       write({ abi: DIGITAL_GOODS_ABI, address: digitalGoods, functionName: "buyWithToken", args: [BigInt(id), token, parseUnits(amount, 18)] } as any),
     approveToken: (token: Address, spender: Address, amount: bigint) =>

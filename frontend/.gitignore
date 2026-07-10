@@ -1,7 +1,24 @@
 # Next.js
 node_modules/
 .next/
+out/
+
+# Environment
 .env
 .env.local
+.env.*.local
+
+# Logs
 *.log
+npm-debug.log*
+
+# OS
 .DS_Store
+Thumbs.db
+
+# TypeScript
+next-env.d.ts
+*.tsbuildinfo
+
+# Coverage
+coverage/
