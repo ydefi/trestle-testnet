@@ -30,7 +30,7 @@ createAppKit({
     name: "Trestle Testnet",
     description: "Trestle DeFi Testnet Hub",
     url: "https://testnet.trestle.website",
-    icons: ["/favicon.svg"],
+    icons: ["https://testnet.trestle.website/favicon.svg"],
   },
   features: {
     email: true,
