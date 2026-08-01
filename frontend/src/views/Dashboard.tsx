@@ -3,23 +3,45 @@ import { useContracts } from "../hooks/useContracts";
 import LoadingSpinner from "../components/LoadingSpinner";
 import QRIcon from "../components/QRIcon";
 import { formatUnits } from "viem";
+import { getBalance } from "wagmi/actions";
+import { config } from "../config/web3";
+import { CHAIN_CONFIG } from "../config/contracts";
 import { getTransactions, getAddressInfo, explorerTxUrl, type BlockscoutTx, type BlockscoutAddress } from "../lib/blockscout";
 
+interface ChainBalance {
+  chainId: number;
+  name: string;
+  symbol: string;
+  balance: string | null;
+  loading: boolean;
+}
+
 export default function Dashboard() {
-  const { address, balance } = useContracts();
+  const { address, balance, chainId, chainName } = useContracts();
   const [txs, setTxs] = useState<BlockscoutTx[] | null>(null);
   const [addrInfo, setAddrInfo] = useState<BlockscoutAddress | null>(null);
   const [bsLoading, setBsLoading] = useState(false);
+  const [chainBalances, setChainBalances] = useState<ChainBalance[]>([]);
 
   useEffect(() => {
-    if (!address) { setTxs(null); setAddrInfo(null); return; }
+    if (!address) { setTxs(null); setAddrInfo(null); setChainBalances([]); return; }
     setBsLoading(true);
-    Promise.all([getTransactions(address), getAddressInfo(address)]).then(([txData, addrData]) => {
+    Promise.all([getTransactions(address, 0, chainId), getAddressInfo(address, chainId)]).then(([txData, addrData]) => {
       setTxs(txData);
       setAddrInfo(addrData);
       setBsLoading(false);
     });
-  }, [address]);
+
+    const chains = Object.values(CHAIN_CONFIG);
+    setChainBalances(chains.map(c => ({ chainId: c.id, name: c.shortName, symbol: c.currency.symbol, balance: null, loading: true })));
+    Promise.all(
+      chains.map(c =>
+        getBalance(config, { address, chainId: c.id })
+          .then(r => ({ chainId: c.id, name: c.shortName, symbol: c.currency.symbol, balance: formatUnits(r.value, r.decimals), loading: false }))
+          .catch(() => ({ chainId: c.id, name: c.shortName, symbol: c.currency.symbol, balance: "0", loading: false }))
+      )
+    ).then(setChainBalances);
+  }, [address, chainId]);
 
   const otherTokens = addrInfo?.token_balances?.filter(t => t.token.symbol !== "MATIC") ?? [];
 
@@ -42,7 +64,7 @@ export default function Dashboard() {
         <div className="relative max-w-4xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-emerald-100 text-emerald-700 text-sm rounded-full mb-6">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            Live on Polygon Amoy Testnet
+            Live on {chainName}
           </div>
 
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900 max-w-3xl mx-auto leading-tight">
@@ -67,15 +89,29 @@ export default function Dashboard() {
 
       {/* Balance Section */}
       <div className="bg-white rounded-2xl border border-gray-100 hover:shadow-lg hover:border-emerald-100 transition-all p-8">
-        <div className="space-y-4 text-center">
-          <p className="text-sm font-medium text-gray-500">Your Balance</p>
-          {balance ? (
-            <p className="text-3xl font-bold text-gray-900">{parseFloat(balance).toFixed(4)} MATIC</p>
+        <div className="space-y-4">
+          <p className="text-sm font-medium text-gray-500 text-center">Your Balance</p>
+          {chainBalances.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              {chainBalances.map(cb => (
+                <div key={cb.chainId} className={`text-center p-4 rounded-xl border transition-all ${cb.chainId === chainId ? "border-emerald-300 bg-emerald-50" : "border-gray-100 hover:border-gray-200"}`}>
+                  <p className="text-xs text-gray-400 mb-1">{cb.name}</p>
+                  {cb.loading ? (
+                    <LoadingSpinner label="" />
+                  ) : (
+                    <p className="text-lg font-bold text-gray-900">{parseFloat(cb.balance || "0").toFixed(4)} <span className="text-sm font-medium text-gray-500">{cb.symbol}</span></p>
+                  )}
+                  {cb.chainId === chainId && <span className="text-[10px] text-emerald-600 font-medium">Connected</span>}
+                </div>
+              ))}
+            </div>
+          ) : balance ? (
+            <p className="text-3xl font-bold text-gray-900 text-center">{parseFloat(balance).toFixed(4)} MATIC</p>
           ) : (
             <LoadingSpinner label="Fetching balance..." />
           )}
           {address && (
-            <p className="text-xs text-gray-400 mt-1">
+            <p className="text-xs text-gray-400 text-center mt-1">
               {address.slice(0, 6)}...{address.slice(-4)}
             </p>
           )}
@@ -115,7 +151,7 @@ export default function Dashboard() {
                 const icon = tx.status === "ok" ? (isOut ? "↑" : "↓") : "✗";
                 const color = tx.status === "ok" ? (isOut ? "text-red-500" : "text-emerald-500") : "text-red-600";
                 return (
-                  <a key={i} href={explorerTxUrl(tx.hash)} target="_blank" rel="noopener noreferrer"
+                  <a key={i} href={explorerTxUrl(chainId, tx.hash)} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-3 text-xs text-gray-600 hover:bg-gray-50 rounded-lg px-2 py-1.5 transition">
                     <span className={`font-mono text-sm ${color}`}>{icon}</span>
                     <span className="font-mono flex-1">{tx.hash.slice(0, 10)}...{tx.hash.slice(-6)}</span>

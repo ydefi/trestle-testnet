@@ -2,6 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract UserProfile is Ownable {
     struct Profile {
@@ -11,21 +12,34 @@ contract UserProfile is Ownable {
     }
 
     struct Review {
+        address reviewer;
         uint8 rating;
         string comment;
         uint256 timestamp;
     }
 
+    uint256 public constant REVIEW_COOLDOWN = 1 days;
+    uint256 public constant MIN_TOKEN_BALANCE = 1e18;
+
+    address public reviewToken;
     mapping(address => Profile) public profiles;
     mapping(address => Review[]) public reviewsReceived;
+    mapping(address => mapping(address => uint256)) public lastReviewTime;
 
     event ProfileUpdated(address indexed user, string name, string avatarURI, string bio);
     event ReviewSubmitted(address indexed reviewer, address indexed user, uint8 rating, string comment);
 
     error EmptyName();
     error InvalidRating();
+    error SelfReview();
+    error ReviewTooSoon();
+    error InsufficientBalance();
+    error ZeroAddress();
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _reviewToken) Ownable(msg.sender) {
+        if (_reviewToken == address(0)) revert ZeroAddress();
+        reviewToken = _reviewToken;
+    }
 
     function setProfile(string calldata _name, string calldata _avatarURI, string calldata _bio) external {
         if (bytes(_name).length == 0) revert EmptyName();
@@ -35,7 +49,12 @@ contract UserProfile is Ownable {
 
     function submitReview(address _user, uint8 _rating, string calldata _comment) external {
         if (_rating == 0 || _rating > 5) revert InvalidRating();
-        reviewsReceived[_user].push(Review(_rating, _comment, block.timestamp));
+        if (msg.sender == _user) revert SelfReview();
+        if (block.timestamp < lastReviewTime[msg.sender][_user] + REVIEW_COOLDOWN) revert ReviewTooSoon();
+        if (IERC20(reviewToken).balanceOf(msg.sender) < MIN_TOKEN_BALANCE) revert InsufficientBalance();
+
+        lastReviewTime[msg.sender][_user] = block.timestamp;
+        reviewsReceived[_user].push(Review(msg.sender, _rating, _comment, block.timestamp));
         emit ReviewSubmitted(msg.sender, _user, _rating, _comment);
     }
 

@@ -4,38 +4,38 @@ import { useReadContracts, useWriteContract } from "wagmi";
 import { getPublicClient } from "wagmi/actions";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { config } from "../config/web3";
+import { useContracts } from "../hooks/useContracts";
 
 const ERC20_ABI = [
   { inputs: [{ name: "account", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], name: "mint", outputs: [], stateMutability: "nonpayable", type: "function" },
 ] as const;
 
-const MINT_AMOUNT = parseUnits("1000", 18);
-
-const TOKENS = [
-  { id: "xGOV", name: "xGOV", addr: process.env.NEXT_PUBLIC_GOV_TOKEN as Address, desc: "Governance token" },
-  { id: "xNOBT", name: "xNOBT", addr: process.env.NEXT_PUBLIC_XNOBT as Address, desc: "Testnet NOBT" },
-  { id: "xBRT", name: "xBRT", addr: process.env.NEXT_PUBLIC_XBRT as Address, desc: "Testnet Broiler" },
-  { id: "USDC", name: "USDC", addr: process.env.NEXT_PUBLIC_MOCK_USDC as Address, desc: "Mock USD Coin" },
-  { id: "USDT", name: "USDT", addr: process.env.NEXT_PUBLIC_MOCK_USDT as Address, desc: "Mock Tether USD" },
-].filter(t => t.addr && t.addr !== "0x...");
-
 export default function Faucet() {
   const { address, connector } = useAccount();
+  const { isCorrectChain, chainCurrency, govTokenAddr, mockUSDCAddr, mockUSDTAddr, mockXNOBTAddr, mockXBRTAddr, explorer } = useContracts();
   const { writeContractAsync } = useWriteContract();
   const [busy, setBusy] = useState<string | null>(null);
   const [txHash, setTxHash] = useState("");
 
+  const TOKENS = [
+    { id: "tGOV", name: "tGOV", addr: govTokenAddr, desc: "Governance token", decimals: 18, amount: "100" },
+    { id: "USDC", name: "USDC", addr: mockUSDCAddr, desc: "Mock USD Coin", decimals: 6, amount: "1000" },
+    { id: "USDT", name: "USDT", addr: mockUSDTAddr, desc: "Mock Tether USD", decimals: 6, amount: "1000" },
+    { id: "xNOBT", name: "xNOBT", addr: mockXNOBTAddr, desc: "Testnet NOBT", decimals: 18, amount: "1000" },
+    { id: "xBRT", name: "xBRT", addr: mockXBRTAddr, desc: "Testnet Broiler", decimals: 18, amount: "1000" },
+  ].filter(t => t.addr && t.addr !== "0x0000000000000000000000000000000000000000");
+
   const { data: balances, refetch } = useReadContracts({
     contracts: TOKENS.map(t => ({ abi: ERC20_ABI, address: t.addr, functionName: "balanceOf", args: address ? [address] : [] })),
-    query: { enabled: !!address },
+    query: { enabled: !!address && isCorrectChain },
   } as any);
 
   async function mint(token: typeof TOKENS[0]) {
     if (!address || busy) return;
     setBusy(token.id); setTxHash("");
     try {
-      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, MINT_AMOUNT], connector } as any);
+      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, parseUnits(token.amount, token.decimals)], connector } as any);
       const publicClient = getPublicClient(config)!;
       await publicClient.waitForTransactionReceipt({ hash });
       setTxHash(hash);
@@ -48,7 +48,7 @@ export default function Faucet() {
     <section className="pt-8">
       <div className="max-w-lg mx-auto px-4">
         <h2 className="text-2xl font-semibold text-gray-900 text-center mb-2">Testnet Faucet</h2>
-        <p className="text-sm text-gray-500 text-center mb-8">Mint 1000 test tokens to your wallet</p>
+        <p className="text-sm text-gray-500 text-center mb-8">Mint test tokens to your wallet — 1000 USDC needed for RWA whitelist</p>
 
         {!address && (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6 text-center">
@@ -57,13 +57,19 @@ export default function Faucet() {
           </div>
         )}
 
-        {txHash && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 break-all">
-            Tx: <a href={`https://amoy.polygonscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
+        {address && !isCorrectChain && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 text-center">
+            <p className="text-sm text-red-700">Switch to a supported testnet to use the faucet</p>
           </div>
         )}
 
-        {address && (
+        {txHash && (
+          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 break-all">
+            Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
+          </div>
+        )}
+
+        {address && isCorrectChain && (
           <div className="space-y-3">
             {TOKENS.map(t => {
               const bal = balances?.[TOKENS.indexOf(t)]?.result as bigint | undefined;
@@ -73,14 +79,14 @@ export default function Faucet() {
                   <div>
                     <p className="font-semibold text-gray-900">{t.name}</p>
                     <p className="text-xs text-gray-400">{t.desc}</p>
-                    <p className="text-sm text-gray-600 mt-1">Balance: {bal ? formatUnits(bal, 18) : "0"}</p>
+                    <p className="text-sm text-gray-600 mt-1">Balance: {bal ? formatUnits(bal, t.decimals) : "0"}</p>
                   </div>
                   <button
                     onClick={() => mint(t)}
                     disabled={!!busy}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition"
                   >
-                    {loading ? "..." : "Mint 1000"}
+                    {loading ? "..." : `Mint ${t.amount}`}
                   </button>
                 </div>
               );

@@ -37,6 +37,27 @@ export default function Icon({ name, size = 24, className = "" }: { name: string
         <path d="M22 4L12 13 2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
+    polygon: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#8247E5"/>
+        <path d="M17.2 9.8c-.3-.2-.7-.2-1 0l-2.4 1.4v2.8l2.4 1.4c.3.2.7.2 1 0 .3-.2.5-.5.5-.9v-2.8c0-.4-.2-.7-.5-.9z" fill="white"/>
+        <path d="M12.8 9.8c-.3-.2-.7-.2-1 0L8.4 11.2v2.8l3.4 1.4c.3.2.7.2 1 0l3.4-1.4v-2.8l-3.4-1.4z" fill="white" opacity="0.8"/>
+        <path d="M8.4 9.8c-.3-.2-.7-.2-1 0L5 11.2v2.8l2.4 1.4c.3.2.7.2 1 0 .3-.2.5-.5.5-.9v-2.8c0-.4-.2-.7-.5-.9z" fill="white" opacity="0.6"/>
+      </svg>
+    ),
+    base: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#0052FF"/>
+        <path d="M12 6a6 6 0 100 12 6 6 0 000-12zm0 9.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z" fill="white"/>
+      </svg>
+    ),
+    arbitrum: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#28A0F0"/>
+        <path d="M8 15.5l4-7 4 7H8z" fill="white"/>
+        <circle cx="12" cy="10" r="1.5" fill="#28A0F0"/>
+      </svg>
+    ),
   };
   return icons[name] || null;
 }

@@ -2,14 +2,17 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./DutchAuctionLib.sol";
 
-contract FreelancerEscrow is Ownable, ReentrancyGuard {
+contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
     using DutchAuctionLib for DutchAuctionLib.Params;
+
+    bytes32 public constant DISPUTE_AGENT_ROLE = keccak256("DISPUTE_AGENT_ROLE");
 
     enum ProjectStatus { Open, InProgress, Completed, Cancelled, Disputed }
     enum PricingMode { Fixed, DutchAuction }
@@ -59,15 +62,18 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
 
     uint256 public projectCount;
     uint256 public gigCount;
-    uint256 public constant PLATFORM_FEE_BPS = 250;
+    uint256 public constant PLATFORM_FEE_BPS = 300;
     uint256 public constant BPS = 10000;
+    uint256 public constant MIN_MILESTONES = 2;
     uint256 public constant MILESTONE_APPROVAL_TIMEOUT = 14 days;
     uint256 public constant DISPUTE_TIMEOUT = 7 days;
 
+    address public treasury;
     mapping(uint256 => Project) public projects;
     mapping(uint256 => Gig) public gigs;
 
     event ProjectCreated(uint256 indexed id, address indexed client, string title, uint256 budget);
+    event ProjectFunded(uint256 indexed id, address indexed client, uint256 amount);
     event ProjectAccepted(uint256 indexed id, address indexed freelancer);
     event MilestoneSubmitted(uint256 indexed id, uint256 milestoneIndex, string deliveryHash);
     event MilestoneApproved(uint256 indexed id, uint256 milestoneIndex, uint256 amount);
@@ -80,6 +86,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     event GigUpdated(uint256 indexed id);
     event GigCancelled(uint256 indexed id);
     event GigHired(uint256 indexed gigId, uint256 indexed projectId, address indexed client);
+    event TreasuryUpdated(address indexed newTreasury);
 
     error NotClient();
     error NotFreelancer();
@@ -91,6 +98,10 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
     error NoFunds();
     error PastDeadline();
     error MixedPayment();
+    error InvalidMilestoneAmount();
+    error TooFewMilestones();
+    error ZeroAddress();
+    error TransferFailed();
 
     modifier onlyClient(uint256 _id) {
         if (msg.sender != projects[_id].client) revert NotClient();
@@ -102,15 +113,77 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         _;
     }
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _treasury) Ownable(msg.sender) {
+        if (_treasury == address(0)) revert ZeroAddress();
+        treasury = _treasury;
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(DISPUTE_AGENT_ROLE, msg.sender);
+    }
+
+    function setTreasury(address _treasury) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_treasury == address(0)) revert ZeroAddress();
+        treasury = _treasury;
+        emit TreasuryUpdated(_treasury);
+    }
 
     function _send(address _token, address _to, uint256 _amount) private {
         if (_amount == 0) return;
         if (_token == address(0)) {
             (bool s,) = _to.call{value: _amount}("");
-            require(s, "Transfer failed");
+            if (!s) revert TransferFailed();
         } else {
             IERC20(_token).safeTransfer(_to, _amount);
+        }
+    }
+
+    function _validateMilestones(
+        string[] calldata _milestoneDescriptions,
+        uint256[] calldata _milestoneAmounts,
+        uint256[] calldata _milestoneDeadlines,
+        uint256 _totalBudget
+    ) private view {
+        uint256 len = _milestoneDescriptions.length;
+        if (len < MIN_MILESTONES || len != _milestoneAmounts.length || len != _milestoneDeadlines.length) revert TooFewMilestones();
+        if (_totalBudget == 0) revert BudgetTooLow();
+        uint256 totalCheck;
+        for (uint256 i; i < len; i++) {
+            if (_milestoneAmounts[i] == 0) revert InvalidMilestoneAmount();
+            if (_milestoneDeadlines[i] <= block.timestamp) revert PastDeadline();
+            totalCheck += _milestoneAmounts[i];
+        }
+        if (totalCheck != _totalBudget) revert BudgetTooLow();
+    }
+
+    function _approveMilestoneLogic(uint256 _id, uint256 _milestoneIndex) private {
+        Project storage p = projects[_id];
+        Milestone storage m = p.milestones[_milestoneIndex];
+
+        m.status = MilestoneStatus.Approved;
+        uint256 amount = m.amount;
+        if (p.escrowedAmount < amount) revert NoFunds();
+        p.escrowedAmount -= amount;
+        uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
+        uint256 netAmount = amount - fee;
+        _send(p.paymentToken, treasury, fee);
+        _send(p.paymentToken, p.freelancer, netAmount);
+
+        emit MilestoneApproved(_id, _milestoneIndex, amount);
+
+        bool allDone = true;
+        for (uint256 i; i < p.milestones.length; i++) {
+            if (p.milestones[i].status != MilestoneStatus.Approved) {
+                allDone = false;
+                break;
+            }
+        }
+        if (allDone) {
+            p.status = ProjectStatus.Completed;
+            if (p.escrowedAmount > 0) {
+                uint256 remaining = p.escrowedAmount;
+                p.escrowedAmount = 0;
+                _send(p.paymentToken, p.freelancer, remaining);
+            }
+            emit ProjectCompleted(_id);
         }
     }
 
@@ -122,11 +195,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256[] calldata _milestoneAmounts,
         uint256[] calldata _milestoneDeadlines
     ) external returns (uint256) {
-        uint256 len = _milestoneDescriptions.length;
-        if (len == 0 || len != _milestoneAmounts.length || len != _milestoneDeadlines.length) revert BudgetTooLow();
-        uint256 totalCheck;
-        for (uint256 i; i < len; i++) totalCheck += _milestoneAmounts[i];
-        if (totalCheck != _totalBudget) revert BudgetTooLow();
+        _validateMilestones(_milestoneDescriptions, _milestoneAmounts, _milestoneDeadlines, _totalBudget);
 
         projectCount++;
         uint256 id = projectCount;
@@ -140,8 +209,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.status = ProjectStatus.Open;
         p.createdAt = block.timestamp;
 
-        for (uint256 i; i < len; i++) {
-            if (_milestoneDeadlines[i] <= block.timestamp) revert PastDeadline();
+        for (uint256 i; i < _milestoneDescriptions.length; i++) {
             p.milestones.push(Milestone(_milestoneDescriptions[i], _milestoneAmounts[i], _milestoneDeadlines[i], MilestoneStatus.Pending, 0, ""));
         }
         emit ProjectCreated(id, msg.sender, _title, _totalBudget);
@@ -159,11 +227,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256[] calldata _milestoneDeadlines
     ) external returns (uint256) {
         DutchAuctionLib.validate(_maxBudget, _reserveBudget, _duration);
-        uint256 len = _milestoneDescriptions.length;
-        if (len == 0 || len != _milestoneAmounts.length || len != _milestoneDeadlines.length) revert BudgetTooLow();
-        uint256 totalCheck;
-        for (uint256 i; i < len; i++) totalCheck += _milestoneAmounts[i];
-        if (totalCheck != _maxBudget) revert BudgetTooLow();
+        _validateMilestones(_milestoneDescriptions, _milestoneAmounts, _milestoneDeadlines, _maxBudget);
 
         projectCount++;
         uint256 id = projectCount;
@@ -178,15 +242,12 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         p.status = ProjectStatus.Open;
         p.createdAt = block.timestamp;
 
-        for (uint256 i; i < len; i++) {
-            if (_milestoneDeadlines[i] <= block.timestamp) revert PastDeadline();
+        for (uint256 i; i < _milestoneDescriptions.length; i++) {
             p.milestones.push(Milestone(_milestoneDescriptions[i], _milestoneAmounts[i], _milestoneDeadlines[i], MilestoneStatus.Pending, 0, ""));
         }
         emit ProjectCreated(id, msg.sender, _title, _maxBudget);
         return id;
     }
-
-    // ─── Gig functions (freelancer-side listings) ───────────────────
 
     function createGig(
         string calldata _title,
@@ -196,11 +257,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256[] calldata _milestoneAmounts,
         uint256[] calldata _milestoneDeadlines
     ) external returns (uint256) {
-        uint256 len = _milestoneDescriptions.length;
-        if (len == 0 || len != _milestoneAmounts.length || len != _milestoneDeadlines.length) revert BudgetTooLow();
-        uint256 totalCheck;
-        for (uint256 i; i < len; i++) totalCheck += _milestoneAmounts[i];
-        if (totalCheck != _price) revert BudgetTooLow();
+        _validateMilestones(_milestoneDescriptions, _milestoneAmounts, _milestoneDeadlines, _price);
 
         gigCount++;
         uint256 id = gigCount;
@@ -211,8 +268,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         g.descriptionURI = _descriptionURI;
         g.price = _price;
         g.active = true;
-        for (uint256 i; i < len; i++) {
-            if (_milestoneDeadlines[i] <= block.timestamp) revert PastDeadline();
+        for (uint256 i; i < _milestoneDescriptions.length; i++) {
             g.milestones.push(GigMilestone(_milestoneDescriptions[i], _milestoneAmounts[i], _milestoneDeadlines[i]));
         }
         emit GigCreated(id, msg.sender, _title, _price);
@@ -231,17 +287,13 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         Gig storage g = gigs[_gigId];
         if (msg.sender != g.freelancer) revert NotFreelancer();
         if (!g.active) revert WrongStatus();
-        uint256 len = _milestoneDescriptions.length;
-        if (len == 0 || len != _milestoneAmounts.length || len != _milestoneDeadlines.length) revert BudgetTooLow();
-        uint256 totalCheck;
-        for (uint256 i; i < len; i++) totalCheck += _milestoneAmounts[i];
-        if (totalCheck != _price) revert BudgetTooLow();
+        _validateMilestones(_milestoneDescriptions, _milestoneAmounts, _milestoneDeadlines, _price);
 
         g.title = _title;
         g.descriptionURI = _descriptionURI;
         g.price = _price;
         delete g.milestones;
-        for (uint256 i; i < len; i++) {
+        for (uint256 i; i < _milestoneDescriptions.length; i++) {
             g.milestones.push(GigMilestone(_milestoneDescriptions[i], _milestoneAmounts[i], _milestoneDeadlines[i]));
         }
         emit GigUpdated(_gigId);
@@ -255,7 +307,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         emit GigCancelled(_gigId);
     }
 
-    function hireGig(uint256 _gigId) external payable returns (uint256) {
+    function hireGig(uint256 _gigId) external payable nonReentrant returns (uint256) {
         Gig storage g = gigs[_gigId];
         if (!g.active) revert WrongStatus();
         if (msg.value < g.price) revert BudgetTooLow();
@@ -288,7 +340,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256 excess = msg.value - g.price;
         if (excess > 0) {
             (bool refund,) = msg.sender.call{value: excess}("");
-            require(refund, "Refund failed");
+            if (!refund) revert TransferFailed();
         }
 
         emit GigHired(_gigId, id, msg.sender);
@@ -319,8 +371,9 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256 excess = msg.value - budget;
         if (excess > 0) {
             (bool refund,) = msg.sender.call{value: excess}("");
-            require(refund, "Refund failed");
+            if (!refund) revert TransferFailed();
         }
+        emit ProjectFunded(_id, msg.sender, budget);
     }
 
     function fundProjectWithToken(uint256 _id, address _token, uint256 _amount) external nonReentrant onlyClient(_id) {
@@ -335,6 +388,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         if (_amount > budget) {
             IERC20(_token).safeTransfer(msg.sender, _amount - budget);
         }
+        emit ProjectFunded(_id, msg.sender, budget);
     }
 
     function acceptProject(uint256 _id) external nonReentrant {
@@ -360,7 +414,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         emit ProjectAccepted(_id, msg.sender);
     }
 
-    function submitMilestone(uint256 _id, uint256 _milestoneIndex, string calldata _deliveryHash) external onlyFreelancer(_id) {
+    function submitMilestone(uint256 _id, uint256 _milestoneIndex, string calldata _deliveryHash) external onlyFreelancer(_id) nonReentrant {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.InProgress) revert WrongStatus();
         if (_milestoneIndex >= p.milestones.length) revert WrongMilestone();
@@ -380,38 +434,10 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         if (_milestoneIndex >= p.milestones.length) revert WrongMilestone();
         Milestone storage m = p.milestones[_milestoneIndex];
         if (m.status != MilestoneStatus.Submitted) revert WrongMilestone();
-
-        p.status = ProjectStatus.InProgress;
-        m.status = MilestoneStatus.Approved;
-        uint256 amount = m.amount;
-        if (p.escrowedAmount < amount) revert NoFunds();
-        p.escrowedAmount -= amount;
-        uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
-        uint256 netAmount = amount - fee;
-        _send(p.paymentToken, owner(), fee);
-        _send(p.paymentToken, p.freelancer, netAmount);
-
-        emit MilestoneApproved(_id, _milestoneIndex, amount);
-
-        bool allDone = true;
-        for (uint256 i; i < p.milestones.length; i++) {
-            if (p.milestones[i].status != MilestoneStatus.Approved) {
-                allDone = false;
-                break;
-            }
-        }
-        if (allDone) {
-            p.status = ProjectStatus.Completed;
-            if (p.escrowedAmount > 0) {
-                uint256 remaining = p.escrowedAmount;
-                p.escrowedAmount = 0;
-                _send(p.paymentToken, p.freelancer, remaining);
-            }
-            emit ProjectCompleted(_id);
-        }
+        _approveMilestoneLogic(_id, _milestoneIndex);
     }
 
-    function rejectMilestone(uint256 _id, uint256 _milestoneIndex) external onlyClient(_id) {
+    function rejectMilestone(uint256 _id, uint256 _milestoneIndex) external onlyClient(_id) nonReentrant {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.InProgress) revert WrongStatus();
         if (_milestoneIndex >= p.milestones.length) revert WrongMilestone();
@@ -428,47 +454,20 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         Milestone storage m = p.milestones[_milestoneIndex];
         if (m.status != MilestoneStatus.Submitted) revert WrongMilestone();
         if (block.timestamp < m.submittedAt + MILESTONE_APPROVAL_TIMEOUT) revert WrongMilestone();
-
-        m.status = MilestoneStatus.Approved;
-        uint256 amount = m.amount;
-        if (p.escrowedAmount < amount) revert NoFunds();
-        p.escrowedAmount -= amount;
-        uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
-        uint256 netAmount = amount - fee;
-        _send(p.paymentToken, owner(), fee);
-        _send(p.paymentToken, p.freelancer, netAmount);
-
-        emit MilestoneApproved(_id, _milestoneIndex, amount);
-
-        bool allDone = true;
-        for (uint256 i; i < p.milestones.length; i++) {
-            if (p.milestones[i].status != MilestoneStatus.Approved) {
-                allDone = false;
-                break;
-            }
-        }
-        if (allDone) {
-            p.status = ProjectStatus.Completed;
-            if (p.escrowedAmount > 0) {
-                uint256 remaining = p.escrowedAmount;
-                p.escrowedAmount = 0;
-                _send(p.paymentToken, p.freelancer, remaining);
-            }
-            emit ProjectCompleted(_id);
-        }
+        _approveMilestoneLogic(_id, _milestoneIndex);
     }
 
-    function disputeProject(uint256 _id) external {
+    function disputeProject(uint256 _id) external nonReentrant {
         Project storage p = projects[_id];
         if (msg.sender != p.client && msg.sender != p.freelancer) revert NotParticipant();
-        if (p.status != ProjectStatus.InProgress && p.status != ProjectStatus.Open) revert WrongStatus();
+        if (p.status != ProjectStatus.InProgress) revert WrongStatus();
 
         p.status = ProjectStatus.Disputed;
         p.disputeDeadline = block.timestamp + DISPUTE_TIMEOUT;
         emit Disputed(_id);
     }
 
-    function resolveDispute(uint256 _id, bool _toFreelancer) external onlyOwner nonReentrant {
+    function resolveDispute(uint256 _id, bool _toFreelancer) external onlyRole(DISPUTE_AGENT_ROLE) nonReentrant {
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Disputed) revert WrongStatus();
 
@@ -498,7 +497,7 @@ contract FreelancerEscrow is Ownable, ReentrancyGuard {
         uint256 amount = p.escrowedAmount;
         p.escrowedAmount = 0;
 
-        if (approvedCount > p.milestones.length / 2) {
+        if (approvedCount * 2 > p.milestones.length) {
             _send(p.paymentToken, p.freelancer, amount);
             emit Resolved(_id, true);
         } else {

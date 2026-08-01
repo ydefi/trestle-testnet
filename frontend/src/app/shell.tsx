@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useSwitchChain } from "wagmi";
 import { useContracts } from "@/hooks/useContracts";
-import { polygonAmoy } from "@/config/web3";
+import { CHAIN_CONFIG, SUPPORTED_CHAIN_IDS } from "@/config/contracts";
 import WalletStatus from "@/components/WalletStatus";
 import AstraChat from "@/components/AstraChat";
 import Footer from "@/components/Footer";
@@ -19,9 +19,15 @@ const NAV_TABS = [
   { href: "/faucet", label: "Faucet", icon: "\uD83D\uDCA7" },
 ];
 
+const CHAIN_ICONS: Record<number, string> = {
+  80002: "polygon",
+  84532: "base",
+  421614: "arbitrum",
+};
+
 export default function Shell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { isCorrectChain, chainName } = useContracts();
+  const { isCorrectChain, chainName, chainId } = useContracts();
   const { switchChainAsync } = useSwitchChain();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -108,17 +114,27 @@ export default function Shell({ children }: { children: React.ReactNode }) {
       {/* Network banner */}
       {!isCorrectChain && (
         <div className="p-2 bg-red-100/50 backdrop-blur-sm text-red-700 text-sm text-center flex items-center justify-center gap-3">
-          <span>Wrong network — connect to Polygon Amoy Testnet</span>
-          <button
-            onClick={() => switchChainAsync({ chainId: polygonAmoy.id }).catch(() => {})}
-            className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors"
-          >
-            Switch to Amoy
-          </button>
+          <span>Wrong network — switch to a supported testnet:</span>
+          <div className="flex gap-1">
+            {Object.entries(CHAIN_CONFIG).map(([key, chain]) => (
+              <button
+                key={key}
+                onClick={() => switchChainAsync({ chainId: chain.id }).catch(() => {})}
+                className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1.5"
+              >
+                <Icon name={CHAIN_ICONS[chain.id] || "logo"} size={14} />
+                {chain.shortName}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {isCorrectChain && (
-        <div className="py-1 text-xs text-gray-400 text-center bg-white/50">{chainName}</div>
+        <div className="py-1 text-xs text-gray-400 text-center bg-white/50 flex items-center justify-center gap-2">
+          <Icon name={CHAIN_ICONS[chainId] || "logo"} size={14} />
+          <span className="w-2 h-2 rounded-full bg-green-400 inline-block" />
+          {chainName}
+        </div>
       )}
 
       {/* Page content */}

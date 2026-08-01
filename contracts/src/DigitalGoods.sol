@@ -34,9 +34,10 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
 
     uint256 public listingCount;
     uint256 public constant DISPUTE_TIMEOUT = 7 days;
-    uint256 public constant PLATFORM_FEE_BPS = 250;
+    uint256 public constant PLATFORM_FEE_BPS = 300;
     uint256 public constant BPS = 10000;
 
+    address public treasury;
     mapping(uint256 => Listing) public listings;
     mapping(uint256 => string) public deliveryHashes;
 
@@ -47,6 +48,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     event Disputed(uint256 indexed id);
     event Resolved(uint256 indexed id, bool toBuyer);
     event Cancelled(uint256 indexed id);
+    event TreasuryUpdated(address indexed newTreasury);
 
     error NotSeller();
     error NotBuyer();
@@ -54,8 +56,19 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     error AlreadyConfirmed();
     error PriceTooLow();
     error NoRefundNeeded();
+    error ZeroAddress();
+    error TransferFailed();
 
-    constructor() Ownable(msg.sender) {}
+    constructor(address _treasury) Ownable(msg.sender) {
+        if (_treasury == address(0)) revert ZeroAddress();
+        treasury = _treasury;
+    }
+
+    function setTreasury(address _treasury) external onlyOwner {
+        if (_treasury == address(0)) revert ZeroAddress();
+        treasury = _treasury;
+        emit TreasuryUpdated(_treasury);
+    }
 
     function listFixed(
         string calldata _metadataURI,
@@ -135,16 +148,15 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         l.escrowedAmount = sellerAmount;
         l.disputeDeadline = block.timestamp + DISPUTE_TIMEOUT;
 
-        (bool feeSent,) = owner().call{value: fee}("");
-        require(feeSent, "Fee transfer failed");
+        (bool feeSent,) = treasury.call{value: fee}("");
+        if (!feeSent) revert TransferFailed();
 
         uint256 excess = msg.value - price;
         if (excess > 0) {
             (bool refund,) = msg.sender.call{value: excess}("");
-            require(refund, "Refund failed");
+            if (!refund) revert TransferFailed();
         }
 
-        _autoDeliverIfSet(_id);
         emit Purchased(_id, msg.sender, price);
     }
 
@@ -160,7 +172,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         uint256 sellerAmount = price - fee;
 
         IERC20(_token).safeTransferFrom(msg.sender, address(this), _amount);
-        if (fee > 0) IERC20(_token).safeTransfer(owner(), fee);
+        if (fee > 0) IERC20(_token).safeTransfer(treasury, fee);
         l.status = ListingStatus.Sold;
         l.buyer = msg.sender;
         l.paymentToken = _token;
@@ -171,17 +183,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
             IERC20(_token).safeTransfer(msg.sender, _amount - price);
         }
 
-        _autoDeliverIfSet(_id);
         emit Purchased(_id, msg.sender, price);
-    }
-
-    function _autoDeliverIfSet(uint256 _id) private {
-        Listing storage l = listings[_id];
-        if (bytes(l.deliveryURI).length > 0) {
-            l.deliveryConfirmed = true;
-            _releaseToSeller(_id);
-            emit DeliveryConfirmed(_id);
-        }
     }
 
     function submitDelivery(uint256 _id, string calldata _deliveryHash) external {
@@ -243,7 +245,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         l.escrowedAmount = 0;
         if (l.paymentToken == address(0)) {
             (bool sent,) = l.seller.call{value: amount}("");
-            require(sent, "Payment failed");
+            if (!sent) revert TransferFailed();
         } else {
             IERC20(l.paymentToken).safeTransfer(l.seller, amount);
         }
@@ -256,7 +258,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         l.escrowedAmount = 0;
         if (l.paymentToken == address(0)) {
             (bool sent,) = l.buyer.call{value: amount}("");
-            require(sent, "Refund failed");
+            if (!sent) revert TransferFailed();
         } else {
             IERC20(l.paymentToken).safeTransfer(l.buyer, amount);
         }

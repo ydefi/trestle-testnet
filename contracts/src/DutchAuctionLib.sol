@@ -10,7 +10,6 @@ library DutchAuctionLib {
     }
 
     error InvalidParams();
-    error AuctionNotActive();
 
     function validate(uint256 _startPrice, uint256 _reservePrice, uint256 _duration) internal pure {
         if (_startPrice <= _reservePrice || _duration == 0) revert InvalidParams();

@@ -15,13 +15,16 @@ const ERC20_ABI = [
   { inputs: [{ name: "spender", type: "address" }, { name: "amount", type: "uint256" }], name: "approve", outputs: [{ name: "", type: "bool" }], stateMutability: "nonpayable", type: "function" },
 ] as const;
 
-const TOKEN_ADDRS: Record<string, string> = {
-  xGOV: process.env.NEXT_PUBLIC_GOV_TOKEN || "",
-  xNOBT: process.env.NEXT_PUBLIC_XNOBT || "",
-  xBRT: process.env.NEXT_PUBLIC_XBRT || "",
-  USDC: process.env.NEXT_PUBLIC_MOCK_USDC || "",
-  USDT: process.env.NEXT_PUBLIC_MOCK_USDT || "",
-};
+function useTokenAddrs() {
+  const { govTokenAddr, mockXNOBTAddr, mockXBRTAddr, mockUSDCAddr, mockUSDTAddr } = useContracts();
+  return {
+    xGOV: govTokenAddr,
+    xNOBT: mockXNOBTAddr,
+    xBRT: mockXBRTAddr,
+    USDC: mockUSDCAddr,
+    USDT: mockUSDTAddr,
+  } as Record<string, string>;
+}
 
 const DG_ABI = [
   { inputs: [{ name: "listingId", type: "uint256" }], name: "buy", outputs: [], stateMutability: "payable", type: "function" },
@@ -34,7 +37,8 @@ const DG_ABI = [
 ] as const;
 
 export default function Marketplace() {
-  const { isConnected, isCorrectChain, digitalGoodsReady, digitalGoodsAddr } = useContracts();
+  const { isConnected, isCorrectChain, digitalGoodsReady, digitalGoodsAddr, explorer } = useContracts();
+  const TOKEN_ADDRS = useTokenAddrs();
   const { address, connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
@@ -46,9 +50,9 @@ export default function Marketplace() {
   const [metaURI, setMetaURI] = useState("ipfs://QmExampleNFT — Unique Digital Artwork");
   const [category, setCategory] = useState("art");
   const [deliveryURI, setDeliveryURI] = useState("");
-  const [fixedPrice, setFixedPrice] = useState("25");
-  const [startPrice, setStartPrice] = useState("100");
-  const [reservePrice, setReservePrice] = useState("10");
+  const [fixedPrice, setFixedPrice] = useState("0.00001");
+  const [startPrice, setStartPrice] = useState("0.00002");
+  const [reservePrice, setReservePrice] = useState("0.000005");
   const [durationHrs, setDurationHrs] = useState("24");
 
   const [buyToken, setBuyToken] = useState<BuyToken>("native");
@@ -105,9 +109,9 @@ export default function Marketplace() {
   }
 
   const EXAMPLE_LISTINGS: Listing[] = [
-    { id: 1n, seller: "0x1234...5678" as Address, metadataURI: "ipfs://QmPizzaNFT — Vintage Pixel Art Slice #01", pricing: 0, price: parseUnits("100", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "art", deliveryURI: "", currentPrice: parseUnits("100", 18) },
-    { id: 2n, seller: "0x8765...4321" as Address, metadataURI: "ipfs://QmDutchNFT — Generative Geometry Collection", pricing: 1, price: parseUnits("500", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "collectibles", deliveryURI: "", currentPrice: parseUnits("320", 18) },
-    { id: 3n, seller: "0xABCD...EF01" as Address, metadataURI: "ipfs://QmMusicNFT — Lo-Fi Beat License", pricing: 0, price: parseUnits("50", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "music", deliveryURI: "", currentPrice: parseUnits("50", 18) },
+    { id: 1n, seller: "0x1234...5678" as Address, metadataURI: "ipfs://QmPizzaNFT — Vintage Pixel Art Slice #01", pricing: 0, price: parseUnits("0.00001", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "art", deliveryURI: "", currentPrice: parseUnits("0.00001", 18) },
+    { id: 2n, seller: "0x8765...4321" as Address, metadataURI: "ipfs://QmDutchNFT — Generative Geometry Collection", pricing: 1, price: parseUnits("0.00005", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "collectibles", deliveryURI: "", currentPrice: parseUnits("0.00003", 18) },
+    { id: 3n, seller: "0xABCD...EF01" as Address, metadataURI: "ipfs://QmMusicNFT — Lo-Fi Beat License", pricing: 0, price: parseUnits("0.000005", 18), status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "music", deliveryURI: "", currentPrice: parseUnits("0.000005", 18) },
   ];
 
   // ── Helpers ──
@@ -183,7 +187,7 @@ export default function Marketplace() {
           )}
           {!isCorrectChain && isConnected && (
             <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center mb-6">
-              <p className="text-sm text-red-700">Switch wallet to Polygon Amoy (chain ID 80002) to interact with testnet marketplace.</p>
+              <p className="text-sm text-red-700">Switch wallet to a supported testnet (Polygon Amoy, Base Sepolia, or Arbitrum Sepolia).</p>
             </div>
           )}
           {isCorrectChain && !digitalGoodsReady && (
@@ -207,7 +211,7 @@ export default function Marketplace() {
 
           {txHash && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 break-all">
-              Tx: <a href={`https://amoy.polygonscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
+              Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
             </div>
           )}
 

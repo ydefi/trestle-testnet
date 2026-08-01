@@ -7,7 +7,7 @@ import { useContracts } from "../hooks/useContracts";
 type Tab = "browse" | "create-gig" | "create-project";
 
 export default function Freelance() {
-  const { address, isConnected, freelancerEscrowReady, freelancerEscrowAddr, freelancerEscrowABI } = useContracts();
+  const { address, isConnected, freelancerEscrowReady, freelancerEscrowAddr, freelancerEscrowABI, explorer } = useContracts();
   const { connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
   const addr = freelancerEscrowAddr as Address;
@@ -19,17 +19,17 @@ export default function Freelance() {
   // ── Create Gig form ──
   const [gigTitle, setGigTitle] = useState("Web Dev");
   const [gigDesc, setGigDesc] = useState("ipfs://QmDescription");
-  const [gigPrice, setGigPrice] = useState("100");
+  const [gigPrice, setGigPrice] = useState("0.00001");
   const [gigMsDesc, setGigMsDesc] = useState("Design,Develop,Deploy");
-  const [gigMsAmt, setGigMsAmt] = useState("30,40,30");
+  const [gigMsAmt, setGigMsAmt] = useState("0.000003,0.000004,0.000003");
   const [gigMsDur, setGigMsDur] = useState("7,14,21");
 
   // ── Create Project form ──
   const [projTitle, setProjTitle] = useState("Build a DApp");
   const [projDesc, setProjDesc] = useState("ipfs://QmProjectSpec");
-  const [projBudget, setProjBudget] = useState("500");
+  const [projBudget, setProjBudget] = useState("0.00003");
   const [projMsDesc, setProjMsDesc] = useState("Frontend,Smart Contract,Testing");
-  const [projMsAmt, setProjMsAmt] = useState("200,200,100");
+  const [projMsAmt, setProjMsAmt] = useState("0.00001,0.00001,0.00001");
   const [projMsDur, setProjMsDur] = useState("14,21,7");
 
   function parseMilestones(descs: string, amounts: string, durs: string) {
@@ -158,7 +158,7 @@ export default function Freelance() {
 
       {txHash && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 break-all">
-          Tx: <a href={`https://amoy.polygonscan.com/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
+          Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
         </div>
       )}
 

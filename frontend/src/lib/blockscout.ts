@@ -1,11 +1,20 @@
-const BLOCKSCOUT_URL = "https://amoy.blockscout.com/api/v2";
+import { CHAIN_CONFIG } from "../config/contracts";
+
 const API_KEY = process.env.NEXT_PUBLIC_BLOCKSCOUT_API_KEY ?? "";
 
-async function api(path: string) {
+export function getBlockscoutUrl(chainId: number): string {
+  for (const config of Object.values(CHAIN_CONFIG)) {
+    if (config.id === chainId) return config.blockscout;
+  }
+  return "https://amoy.blockscout.com";
+}
+
+async function api(chainId: number, path: string) {
+  const baseUrl = getBlockscoutUrl(chainId);
   try {
     const opts: RequestInit = { headers: { "Content-Type": "application/json" } };
     if (API_KEY) (opts.headers as Record<string, string>)["x-api-key"] = API_KEY;
-    const r = await fetch(`${BLOCKSCOUT_URL}${path}`, opts);
+    const r = await fetch(`${baseUrl}/api/v2${path}`, opts);
     if (!r.ok) return null;
     return r.json();
   } catch { return null; }
@@ -37,36 +46,40 @@ export interface BlockscoutAddress {
   token_balances: { token: { name: string; symbol: string; decimals: string }; value: string }[] | null;
 }
 
-export async function getTransactions(address: string, page = 0): Promise<BlockscoutTx[] | null> {
-  const data = await api(`/addresses/${address}/transactions?page=${page + 1}&limit=10`);
+export async function getTransactions(address: string, page = 0, chainId = 80002): Promise<BlockscoutTx[] | null> {
+  const data = await api(chainId, `/addresses/${address}/transactions?page=${page + 1}&limit=10`);
   if (!data || !data.items) return null;
   return data.items;
 }
 
-export async function getTokenTransfers(address: string): Promise<BlockscoutTokenTransfer[] | null> {
-  const data = await api(`/addresses/${address}/token-transfers?limit=10`);
+export async function getTokenTransfers(address: string, chainId = 80002): Promise<BlockscoutTokenTransfer[] | null> {
+  const data = await api(chainId, `/addresses/${address}/token-transfers?limit=10`);
   if (!data || !data.items) return null;
   return data.items;
 }
 
-export async function getAddressInfo(address: string): Promise<BlockscoutAddress | null> {
-  const data = await api(`/addresses/${address}`);
+export async function getAddressInfo(address: string, chainId = 80002): Promise<BlockscoutAddress | null> {
+  const data = await api(chainId, `/addresses/${address}`);
   if (!data || !data.hash) return null;
   return data;
 }
 
-export function explorerTxUrl(hash: string) {
-  return `https://amoy.blockscout.com/tx/${hash}`;
+export function explorerTxUrl(chainId: number, hash: string) {
+  return `${getBlockscoutUrl(chainId)}/tx/${hash}`;
 }
 
-export function explorerAddressUrl(address: string) {
-  return `https://amoy.blockscout.com/address/${address}`;
+export function explorerAddressUrl(chainId: number, address: string) {
+  return `${getBlockscoutUrl(chainId)}/address/${address}`;
 }
 
-export function rpcUrl() {
-  return "https://amoy.blockscout.com/rpc";
+export function rpcUrl(chainId: number) {
+  for (const config of Object.values(CHAIN_CONFIG)) {
+    if (config.id === chainId) return config.rpc;
+  }
+  return "https://rpc-amoy.polygon.technology/";
 }
 
-export function explorerUrl() {
-  return BLOCKSCOUT_URL;
+export function explorerUrl(chainId?: number) {
+  if (chainId) return getBlockscoutUrl(chainId);
+  return `${getBlockscoutUrl(80002)}/api/v2`;
 }
