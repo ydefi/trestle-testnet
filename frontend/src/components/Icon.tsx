@@ -1,16 +1,7 @@
-<<<<<<< HEAD
 import type { JSX } from "react";
 
-export function Icon({ name, size = 20, className = "" }: { name: string; size?: number; className?: string }) {
+export default function Icon({ name, size = 24, className = "" }: { name: string; size?: number; className?: string }) {
   const icons: Record<string, JSX.Element> = {
-    logo: (
-      <svg viewBox="0 0 256 256" width={size} height={size} className={className}>
-        <circle cx="128" cy="128" r="124" fill="#059669"/>
-=======
-type IconName = "logo" | "spinner" | "discord" | "telegram" | "github" | "globe" | "email" | "x";
-
-export default function Icon({ name, size = 24, className = "" }: { name: IconName; size?: number; className?: string }) {
-  const icons = {
     logo: (
       <svg viewBox="0 0 256 256" fill="none" className={className} style={{ width: size, height: size }}>
         <defs>
@@ -20,91 +11,14 @@ export default function Icon({ name, size = 24, className = "" }: { name: IconNa
           </linearGradient>
         </defs>
         <circle cx="128" cy="128" r="124" fill="url(#icon-bg)"/>
->>>>>>> 7c29aad (initial commit)
         <rect x="48" y="168" width="160" height="28" rx="6" fill="white" opacity="0.95"/>
         <rect x="72" y="120" width="112" height="24" rx="5" fill="white" opacity="0.85"/>
         <rect x="96" y="72" width="64" height="20" rx="4" fill="white" opacity="0.95"/>
       </svg>
     ),
-<<<<<<< HEAD
-    dashboard: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="7" height="9" rx="1"/>
-        <rect x="14" y="3" width="7" height="5" rx="1"/>
-        <rect x="14" y="12" width="7" height="9" rx="1"/>
-        <rect x="3" y="16" width="7" height="5" rx="1"/>
-      </svg>
-    ),
-    stake: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="2" x2="12" y2="22"/>
-        <path d="M17 6H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-    ),
-    tasks: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 11l3 3L22 4"/>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-      </svg>
-    ),
-    verify: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-        <path d="M9 12l2 2 4-4"/>
-      </svg>
-    ),
-    wallet: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="4" width="22" height="16" rx="2"/>
-        <path d="M1 10h22"/>
-        <circle cx="18" cy="14" r="0.5" fill="currentColor"/>
-      </svg>
-    ),
-    telegram: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
-        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347"/>
-      </svg>
-    ),
-    discord: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.198.024.283.088.177.128.248.348.2.562l-.573 2.723c-.042.188-.19.32-.38.375-.09.024-.18.014-.26-.024l-.008.001-.055-.024-1.516-.69c-.116-.053-.236-.01-.297.097-.053.096-.026.235.08.316l2.11 1.53c.08.06.13.16.14.27v4.46c0 .18-.1.34-.25.41-.15.07-.32.04-.44-.07l-1.98-2.38a.45.45 0 0 1-.07-.22v-4.5l.01-.01-2.1-1.52a.57.57 0 0 1-.2-.68c.05-.1.14-.16.24-.17h.06z"/>
-      </svg>
-    ),
-    globe: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="12" r="10"/>
-        <ellipse cx="12" cy="12" rx="5" ry="10"/>
-        <line x1="2" y1="12" x2="22" y2="12"/>
-      </svg>
-    ),
-    check: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="currentColor">
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-      </svg>
-    ),
-    bounty: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 2l-1 6-6 1 6 1 1 6 1-6 6-1-6-1z"/>
-        <path d="M12 12l7 7"/>
-        <circle cx="17" cy="17" r="4"/>
-      </svg>
-    ),
-    marketplace: (
-      <svg viewBox="0 0 24 24" width={size} height={size} className={className} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-        <line x1="3" y1="6" x2="21" y2="6"/>
-        <path d="M16 10a4 4 0 0 1-8 0"/>
-=======
-    spinner: (
-      <svg viewBox="0 0 32 32" className={className} style={{ width: size, height: size }}>
-        <circle cx="16" cy="16" r="12" fill="none" stroke="#059669" strokeWidth="3" strokeDasharray="70 30" strokeLinecap="round">
-          <animateTransform attributeName="transform" type="rotate" from="0 16 16" to="360 16 16" dur="1s" repeatCount="indefinite"/>
-        </circle>
-      </svg>
-    ),
     discord: (
       <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.198.024.283.088.177.128.248.348.2.562l-.573 2.723c-.042.188-.19.32-.38.375-.09.024-.18.014-.26-.024l-.008.001-.055-.024-1.516-.69c-.116-.053-.236-.01-.297.097-.053.096-.026.235.08.316l2.11 1.53c.08.06.13.16.14.27v4.46c0 .18-.1.34-.25.41-.15.07-.32.04-.44-.07l-1.98-2.38a.45.45 0 0 1-.07-.22v-4.5l.01-.01-2.1-1.52a.57.57 0 0 1-.2-.68c.05-.1.14-.16.24-.17h.06z"/>
+        <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.211.375-.444.864-.608 1.25a18.67 18.67 0 0 0-5.487 0c-.164-.386-.406-.875-.617-1.25a.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 4.5 4.369a.07.07 0 0 0-.032.027C.533 9.045-.32 13.58.099 18.057a.082.082 0 0 0 .031.056c2.053 1.508 4.041 2.423 5.993 3.03a.077.077 0 0 0 .084-.028c.462-.63.873-1.295 1.226-1.994a.076.076 0 0 0-.042-.106c-.653-.247-1.274-.549-1.872-.892a.077.077 0 0 1-.042-.054.076.076 0 0 1 .027-.072c.126-.093.252-.19.371-.291a.074.074 0 0 1 .077-.01c3.927 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .079.01c.12.1.246.197.372.291a.077.077 0 0 1-.014.126c-.598.343-1.219.645-1.878.892a.077.077 0 0 0-.042.106c.355.699.769 1.364 1.23 1.994a.076.076 0 0 0 .084.028c1.962-.607 3.95-1.522 6.003-3.03a.077.077 0 0 0 .031-.055c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.029zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
       </svg>
     ),
     telegram: (
@@ -114,14 +28,7 @@ export default function Icon({ name, size = 24, className = "" }: { name: IconNa
     ),
     github: (
       <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-      </svg>
-    ),
-    "globe": (
-      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <ellipse cx="12" cy="12" rx="5" ry="10" fill="none" stroke="currentColor" strokeWidth="2"/>
-        <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="2"/>
+        <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/>
       </svg>
     ),
     email: (
@@ -130,16 +37,27 @@ export default function Icon({ name, size = 24, className = "" }: { name: IconNa
         <path d="M22 4L12 13 2 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
       </svg>
     ),
-    x: (
-      <svg viewBox="0 0 24 24" fill="currentColor" className={className} style={{ width: size, height: size }}>
-        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231z"/>
->>>>>>> 7c29aad (initial commit)
+    polygon: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#8247E5"/>
+        <path d="M17.2 9.8c-.3-.2-.7-.2-1 0l-2.4 1.4v2.8l2.4 1.4c.3.2.7.2 1 0 .3-.2.5-.5.5-.9v-2.8c0-.4-.2-.7-.5-.9z" fill="white"/>
+        <path d="M12.8 9.8c-.3-.2-.7-.2-1 0L8.4 11.2v2.8l3.4 1.4c.3.2.7.2 1 0l3.4-1.4v-2.8l-3.4-1.4z" fill="white" opacity="0.8"/>
+        <path d="M8.4 9.8c-.3-.2-.7-.2-1 0L5 11.2v2.8l2.4 1.4c.3.2.7.2 1 0 .3-.2.5-.5.5-.9v-2.8c0-.4-.2-.7-.5-.9z" fill="white" opacity="0.6"/>
+      </svg>
+    ),
+    base: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#0052FF"/>
+        <path d="M12 6a6 6 0 100 12 6 6 0 000-12zm0 9.6a3.6 3.6 0 110-7.2 3.6 3.6 0 010 7.2z" fill="white"/>
+      </svg>
+    ),
+    arbitrum: (
+      <svg viewBox="0 0 24 24" className={className} style={{ width: size, height: size }}>
+        <circle cx="12" cy="12" r="12" fill="#28A0F0"/>
+        <path d="M8 15.5l4-7 4 7H8z" fill="white"/>
+        <circle cx="12" cy="10" r="1.5" fill="#28A0F0"/>
       </svg>
     ),
   };
   return icons[name] || null;
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 7c29aad (initial commit)

@@ -1,23 +1,24 @@
-<<<<<<< HEAD
+# Next.js
 node_modules/
-.env
-.env.local
-dist/
-*.log
-.DS_Store
-*.tsbuildinfo
-coverage/
-=======
-# Frontend (Vite)
-node_modules/
+.next/
+out/
+
+# Environment
 .env
 .env.local
 .env.*.local
-dist/
-*.log
-.DS_Store
 
-# Optional: keep lockfiles
-# package-lock.json
-# yarn.lock
->>>>>>> 7c29aad (initial commit)
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+next-env.d.ts
+*.tsbuildinfo
+
+# Coverage
+coverage/

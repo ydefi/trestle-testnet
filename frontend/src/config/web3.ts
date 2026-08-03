@@ -1,31 +1,36 @@
-<<<<<<< HEAD
 import { http, fallback } from "viem";
-import { polygon, polygonAmoy } from "viem/chains";
+import { polygonAmoy, baseSepolia, arbitrumSepolia } from "viem/chains";
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { createAppKit } from "@reown/appkit/react";
 
-export const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
+export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
 
-const polygonTransports = [
-  http("https://polygon-rpc.com", { retryCount: 2, retryDelay: 500 }),
-  http("https://polygon.llamarpc.com", { retryCount: 2, retryDelay: 500 }),
-  http("https://rpc.ankr.com/polygon", { retryCount: 2, retryDelay: 500 }),
-  http("https://polygon.drpc.org", { retryCount: 2, retryDelay: 500 }),
-].filter(Boolean) as ReturnType<typeof http>[];
+const AMOY_RPC = [
+  "https://polygon-amoy.drpc.org",
+  "https://rpc-amoy.polygon.technology/",
+  "https://amoy.blockscout.com/rpc",
+];
 
-const amoyTransports = [
-  http("https://rpc-amoy.polygon.technology", { retryCount: 2, retryDelay: 500 }),
-  http("https://polygon-amoy.g.alchemy.com/v2/demo", { retryCount: 2, retryDelay: 500 }),
-].filter(Boolean) as ReturnType<typeof http>[];
+const BASE_SEPOLIA_RPC = [
+  "https://sepolia.base.org",
+  "https://base-sepolia.drpc.org",
+];
+
+const ARB_SEPOLIA_RPC = [
+  "https://sepolia-rollup.arbitrum.io/rpc",
+  "https://arbitrum-sepolia.drpc.org",
+];
+
+const chains = [polygonAmoy, baseSepolia, arbitrumSepolia];
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
-  networks: [polygon, polygonAmoy],
+  networks: chains,
   transports: {
-    [polygon.id]: fallback(polygonTransports, { rank: true }),
-    [polygonAmoy.id]: fallback(amoyTransports, { rank: true }),
+    [polygonAmoy.id]: fallback(AMOY_RPC.map(url => http(url, { retryCount: 3, retryDelay: 1000 }))),
+    [baseSepolia.id]: fallback(BASE_SEPOLIA_RPC.map(url => http(url, { retryCount: 3, retryDelay: 1000 }))),
+    [arbitrumSepolia.id]: fallback(ARB_SEPOLIA_RPC.map(url => http(url, { retryCount: 3, retryDelay: 1000 }))),
   },
-  ssr: true,
 });
 
 export const config = wagmiAdapter.wagmiConfig;
@@ -33,12 +38,16 @@ export const config = wagmiAdapter.wagmiConfig;
 createAppKit({
   adapters: [wagmiAdapter],
   projectId,
-  networks: [polygon, polygonAmoy],
+  networks: chains as [typeof polygonAmoy, typeof baseSepolia, typeof arbitrumSepolia],
+  chainImages: {
+    [polygonAmoy.id]: "/chain/polygon.svg",
+    [arbitrumSepolia.id]: "/chain/arbitrum.svg",
+  },
   metadata: {
-    name: "Trestle DeFi",
-    description: "Trestle Telegram Mini App",
-    url: import.meta.env.VITE_SITE_URL || "https://trestle.website",
-    icons: [`${import.meta.env.VITE_SITE_URL || "https://trestle.website"}/favicon.svg`],
+    name: "Trestle Testnet",
+    description: "Trestle DeFi Multi-Chain Testnet Hub",
+    url: "https://testnet.trestle.website",
+    icons: ["https://testnet.trestle.website/favicon.svg"],
   },
   features: {
     email: true,
@@ -51,44 +60,4 @@ createAppKit({
   },
 });
 
-export { polygon, polygonAmoy };
-=======
-import { http, createConfig } from "wagmi";
-import { fallback } from "viem";
-import { polygonAmoy } from "wagmi/chains";
-import { walletConnect, injected } from "wagmi/connectors";
-import { authConnector } from "@web3modal/wagmi";
-
-export const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "";
-
-// Amoy testnet RPC providers with fallback for load balancing and redundancy
-const amoyTransports = [
-  http("https://rpc-amoy.polygon.technology", { retryCount: 2, retryDelay: 1000 }),
-  http("https://polygon-amoy-bor-rpc.publicnode.com", { retryCount: 2, retryDelay: 1000 }),
-  http("https://rpc.ankr.com/polygon_amoy", { retryCount: 2, retryDelay: 1000 }),
-  ...(import.meta.env.VITE_BLOCKSCOUT_API_AMOY && import.meta.env.VITE_BLOCKSCOUT_API_KEY 
-    ? [http(`${import.meta.env.VITE_BLOCKSCOUT_API_AMOY}?apikey=${import.meta.env.VITE_BLOCKSCOUT_API_KEY}`, { retryCount: 2, retryDelay: 500 })]
-    : [])
-].filter(Boolean) as ReturnType<typeof http>[];
-
-export const config = createConfig({
-  chains: [polygonAmoy],
-  connectors: [
-    walletConnect({ projectId, showQrModal: false }),
-    injected(),
-    authConnector({
-      options: { projectId },
-      email: true,
-      socials: ["google", "github", "discord"],
-      showWallets: true,
-      walletFeatures: true,
-    }),
-  ],
-  transports: {
-    [polygonAmoy.id]: fallback(amoyTransports, { rank: true }),
-  },
-  // Configure reasonable gas prices for testnet to avoid excessive fees
-  // Polygon Amoy testnet typically has low gas prices, we'll set a conservative max
-  // 30 gwei should be plenty for testnet transactions
-});
->>>>>>> 7c29aad (initial commit)
+export { polygonAmoy, baseSepolia, arbitrumSepolia };
