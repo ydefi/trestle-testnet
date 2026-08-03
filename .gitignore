@@ -1,17 +1,38 @@
+<<<<<<< HEAD
 node_modules/
 .env
 .env.local
 *.log
 .DS_Store
+dist/
+.wrangler/
+coverage/
+=======
+# Testnet Repository
+
+# Dependencies
+node_modules/
+
+# Environment files - NEVER commit .env with real keys
+.env
+.env.local
+.env.*.local
+
+# Build artifacts
+dist/
 artifacts/
 cache/
-test/
 typechain-types/
-.next/
-out/
-dist/
-verify/
-verify-*.json
-*.d.ts
-*-checkpoint.json
-.env.*
+
+# Logs and OS files
+*.log
+.DS_Store
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.sublime-*
+>>>>>>> 7c29aad (initial commit)

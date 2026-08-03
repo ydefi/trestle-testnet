@@ -1,0 +1,15 @@
+name: Vault Daily Cron
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  trigger-yield-cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger vault yield processing
+        run: |
+          curl -sf -X POST "${{ secrets.VAULT_API_URL }}/api/vault/yield/cron" \
+            -H "X-Cron-Secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

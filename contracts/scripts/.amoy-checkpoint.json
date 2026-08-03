@@ -1,0 +1,79 @@
+{
+  "deployed": {
+    "feeDistributor": {
+      "addr": "0xC878166Bc446cb6Db91Dc55e9CcD1405834bc06B",
+      "args": [
+        "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6",
+        "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6"
+      ]
+    },
+    "digitalGoods": {
+      "addr": "0x612B5dda1BCBe17Dff554bb446A8018a574DBe37",
+      "args": [
+        "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6"
+      ]
+    },
+    "freelancerEscrow": {
+      "addr": "0xBF4588E207c2191Ee9D3f114370a6dbf4BACFFf3",
+      "args": [
+        "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6"
+      ]
+    },
+    "userProfile": {
+      "addr": "0xe5665d1D2F180D27d328acCBB83f5fBE32A6666A",
+      "args": [
+        "0x9280b24542a52cEE54a78dB65A497D8BeC4BAB94"
+      ]
+    },
+    "mockUSDC": {
+      "addr": "0xb0a742a2302B043718b60053b135dC432C892852",
+      "args": [
+        "Mock USDC",
+        "USDC",
+        6,
+        "1000000000000"
+      ]
+    },
+    "mockUSDT": {
+      "addr": "0x432aCe196DFD335396257e0CDF33B3f815b6fF0B",
+      "args": [
+        "Mock USDT",
+        "USDT",
+        6,
+        "1000000000000"
+      ]
+    },
+    "mockXNOBT": {
+      "addr": "0x4710d00AC3C2B6d0375F762076BDCE5ef835E64f",
+      "args": [
+        "Mock xNOBT",
+        "xNOBT",
+        18,
+        "1000000000000000000000000"
+      ]
+    },
+    "mockXBRT": {
+      "addr": "0xc550F40566C2aFEe6980aC3d64b9B3A2A0B8b914",
+      "args": [
+        "Mock xBRT",
+        "xBRT",
+        18,
+        "1000000000000000000000000"
+      ]
+    },
+    "digitalRWA": {
+      "addr": "0x89f5394a468343F405285040664Fd77843D2a2e6",
+      "args": [
+        "Trestle Real Asset 1",
+        "TRA1",
+        "0x697066733a2f2f516d506c616365686f6c646572000000000000000000000000",
+        "1000000000000000000000000",
+        "0x9280b24542a52cEE54a78dB65A497D8BeC4BAB94",
+        "0xb0a742a2302B043718b60053b135dC432C892852",
+        "1000000000",
+        "0x001382149eBa3441043c1c66972b4772963f5D43"
+      ]
+    }
+  },
+  "current": "digitalRWA"
+}

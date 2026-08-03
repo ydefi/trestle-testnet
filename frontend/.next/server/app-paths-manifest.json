@@ -1,0 +1,7 @@
+{
+  "/page": "app/page.js",
+  "/marketplace/page": "app/marketplace/page.js",
+  "/rwa/page": "app/rwa/page.js",
+  "/profile/page": "app/profile/page.js",
+  "/faucet/page": "app/faucet/page.js"
+}

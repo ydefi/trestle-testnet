@@ -1,22 +1,8 @@
 # Hardhat
+node_modules/
+.env
 artifacts/
 cache/
-test/
-scripts/
 typechain-types/
-
-# Environment
-.env
-
-# Dependencies
-node_modules/
-
-# Logs
 *.log
-
-# Coverage
-coverage/
-coverage.json
-
-# OS
 .DS_Store

@@ -1,11 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { astraChat } from "../lib/astra";
-import { jonahChat } from "../lib/jonah";
 
 const AGENTS = [
-  { id: "astra", label: "Astra", avatar: "/avatars/Astra.jpg", desc: "DevSecOps Lead", color: "bg-blue-500" },
-  { id: "jonah", label: "Jonah", avatar: "/avatars/Jonah.jpg", desc: "Community Manager", color: "bg-cyan-500" },
+  { id: "astra", label: "Astra AI", avatar: "/avatars/Astra.jpg", desc: "DevSecOps Lead" },
 ];
 
 type Message = {
@@ -17,16 +15,14 @@ type Message = {
 export default function AstraChat() {
   const { address } = useAccount();
   const [open, setOpen] = useState(false);
-  const [activeAgent, setActiveAgent] = useState<"astra" | "jonah">("astra");
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
-  const [lastAgent, setLastAgent] = useState<string>("astra");
   const bottom = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottom.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  const agentChat = activeAgent === "astra" ? astraChat : jonahChat;
+  const currentAgent = AGENTS[0];
 
   const send = async () => {
     if (!input.trim() || busy) return;
@@ -34,14 +30,15 @@ export default function AstraChat() {
     setInput("");
     setMessages(prev => [...prev, { role: "user", text: msg }]);
     setBusy(true);
-    const ctx = address ? { address: address.slice(0, 8) } : undefined;
-    const response = await agentChat(msg, ctx);
-    setMessages(prev => [...prev, { role: "agent", text: response, agentId: activeAgent }]);
-    setLastAgent(activeAgent);
+    try {
+      const ctx = address ? { address: address.slice(0, 8) } : undefined;
+      const response = await astraChat(msg, ctx);
+      setMessages(prev => [...prev, { role: "agent", text: response, agentId: "astra" }]);
+    } catch {
+      setMessages(prev => [...prev, { role: "agent", text: "Astra is offline. Try again later.", agentId: "astra" }]);
+    }
     setBusy(false);
   };
-
-  const currentAgent = AGENTS.find(a => a.id === lastAgent) || AGENTS[0];
 
   if (!open) {
     return (
@@ -51,7 +48,7 @@ export default function AstraChat() {
                   shadow-2xl hover:bg-emerald-700 transition-all duration-300 transform hover:scale-105
                   flex items-center justify-center overflow-hidden"
       >
-        <img src={currentAgent.avatar} alt="Agent" className="w-full h-full object-cover animate-pulse" />
+        <img src={currentAgent.avatar} alt="Astra" className="w-full h-full object-cover animate-pulse" />
       </button>
     );
   }
@@ -67,33 +64,17 @@ export default function AstraChat() {
             <p className="text-xs text-white/80">{currentAgent.desc}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-emerald-700 rounded-lg overflow-hidden text-xs">
-            {AGENTS.map(a => (
-              <button
-                key={a.id}
-                onClick={() => setActiveAgent(a.id as "astra" | "jonah")}
-                className={`px-2.5 py-1.5 flex items-center gap-1.5 transition ${activeAgent === a.id ? "bg-emerald-500 text-white" : "text-white/70 hover:text-white"}`}
-              >
-                <img src={a.avatar} alt="" className="w-4 h-4 rounded-full object-cover" />
-                {a.label}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={() => setOpen(false)}
-            className="text-white/90 hover:text-white text-xl leading-none transition-colors duration-200"
-          >
-            ×
-          </button>
-        </div>
+        <button
+          onClick={() => setOpen(false)}
+          className="text-white/90 hover:text-white text-xl leading-none transition-colors duration-200"
+        >
+          ×
+        </button>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-[200px]">
         {messages.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-sm text-gray-500 mb-2">
-              Chat with {currentAgent.label} about Trestle.
-            </p>
+            <p className="text-sm text-gray-500 mb-2">Ask me about Trestle tasks, rewards, or anything.</p>
           </div>
         )}
         {messages.map((m, i) => {
@@ -120,7 +101,7 @@ export default function AstraChat() {
           <div className="flex items-center justify-center py-4">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-xs text-emerald-600 font-medium">{AGENTS.find(a => a.id === activeAgent)?.label} is thinking...</span>
+              <span className="text-xs text-emerald-600 font-medium">{currentAgent.label} is thinking...</span>
             </div>
           </div>
         )}
@@ -131,7 +112,7 @@ export default function AstraChat() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={e => e.key === "Enter" && send()}
-          placeholder={`Ask ${AGENTS.find(a => a.id === activeAgent)?.label}...`}
+          placeholder={`Ask ${currentAgent.label}...`}
           className="flex-1 min-h-[44px] border border-gray-300 rounded-lg px-4 py-2 text-sm
                     focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200
                     transition-all duration-200"
