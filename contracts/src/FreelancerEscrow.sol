@@ -450,6 +450,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
 
     function autoApproveMilestone(uint256 _id, uint256 _milestoneIndex) external nonReentrant {
         Project storage p = projects[_id];
+        if (msg.sender != p.client && msg.sender != p.freelancer) revert NotParticipant();
         if (_milestoneIndex >= p.milestones.length) revert WrongMilestone();
         Milestone storage m = p.milestones[_milestoneIndex];
         if (m.status != MilestoneStatus.Submitted) revert WrongMilestone();
@@ -483,6 +484,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
 
     function autoResolveDispute(uint256 _id) external nonReentrant {
         Project storage p = projects[_id];
+        if (msg.sender != p.client && msg.sender != p.freelancer) revert NotParticipant();
         if (p.status != ProjectStatus.Disputed) revert WrongStatus();
         if (block.timestamp < p.disputeDeadline) revert WrongStatus();
 

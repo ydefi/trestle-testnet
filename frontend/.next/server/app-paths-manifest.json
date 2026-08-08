@@ -1,7 +1,8 @@
 {
-  "/page": "app/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
+  "/faucet/page": "app/faucet/page.js",
   "/marketplace/page": "app/marketplace/page.js",
-  "/rwa/page": "app/rwa/page.js",
+  "/page": "app/page.js",
   "/profile/page": "app/profile/page.js",
-  "/faucet/page": "app/faucet/page.js"
+  "/rwa/page": "app/rwa/page.js"
 }

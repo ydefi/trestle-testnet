@@ -437,6 +437,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     it("buy with ERC20 token", async function () {
       const price = ethers.parseEther("100");
       await digitalGoods.connect(seller).listFixed("ipfs://token-item", price, "", "");
+      await digitalGoods.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(buyer.address, price);
       await mockToken.connect(buyer).approve(await digitalGoods.getAddress(), price);
       await digitalGoods.connect(buyer).buyWithToken(1, await mockToken.getAddress(), price);
@@ -693,6 +694,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("fundProjectWithToken", async function () {
       await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(client.address, budget);
       await mockToken.connect(client).approve(await freelancerEscrow.getAddress(), budget);
       await freelancerEscrow.connect(client).fundProjectWithToken(1, await mockToken.getAddress(), budget);

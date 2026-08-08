@@ -208,6 +208,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         Listing storage l = listings[_id];
         if (msg.sender != l.buyer && msg.sender != l.seller) revert WrongStatus();
         if (l.status != ListingStatus.Sold || l.deliveryConfirmed) revert WrongStatus();
+        if (block.timestamp > l.disputeDeadline) revert WrongStatus();
 
         l.status = ListingStatus.Disputed;
         emit Disputed(_id);
@@ -215,6 +216,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
 
     function resolveAfterTimeout(uint256 _id) external nonReentrant {
         Listing storage l = listings[_id];
+        if (msg.sender != l.buyer && msg.sender != l.seller) revert WrongStatus();
         if (l.status != ListingStatus.Disputed && l.status != ListingStatus.Sold) revert WrongStatus();
         if (l.deliveryConfirmed) revert AlreadyConfirmed();
         if (block.timestamp < l.disputeDeadline) revert WrongStatus();

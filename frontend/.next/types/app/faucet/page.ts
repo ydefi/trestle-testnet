@@ -1,4 +1,4 @@
-// File: /media/joop/J/trestle-git/testnet-trestle-website/frontend/src/app/faucet/page.tsx
+// File: /media/joop/J/trestle-git/trestle-build-dirs/testnet-trestle-website/frontend/src/app/faucet/page.tsx
 import * as entry from '../../../../src/app/faucet/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

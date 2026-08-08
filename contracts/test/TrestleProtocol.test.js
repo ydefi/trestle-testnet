@@ -255,7 +255,7 @@ describe("Testnet Contracts", function () {
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
       await ethers.provider.send("evm_mine");
 
-      await digitalGoods.connect(user).resolveAfterTimeout(1);
+      await digitalGoods.connect(buyer).resolveAfterTimeout(1);
       const listing = await digitalGoods.listings(1);
       expect(listing.status).to.equal(4); // Refunded
     });
@@ -461,7 +461,7 @@ describe("Testnet Contracts", function () {
       await ethers.provider.send("evm_increaseTime", [15 * 86400]);
       await ethers.provider.send("evm_mine");
 
-      await freelancerEscrow.connect(user).autoApproveMilestone(1, 0);
+      await freelancerEscrow.connect(client).autoApproveMilestone(1, 0);
 
       const p = await freelancerEscrow.projects(1);
     });
