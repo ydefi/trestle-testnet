@@ -21,11 +21,28 @@ Testnet platform for Trestle DeFi. Smart contracts deployed on **Polygon Amoy**,
 
 Deployed addresses are maintained in `frontend/src/config/contracts.ts` (`CONTRACT_ADDRESSES`).
 
+### Arbitrum Sepolia Deployments (latest)
+
+| Contract | Address |
+|----------|---------|
+| **DigitalGoods** | `0x272475feaD659100E6DD8EBd8dB88E6f064DC112` |
+| **FreelancerEscrow** | `0x6A08C1eE8102B41935a758b5E3093b075113E615` |
+| **DigitalRWA** | `0x18dF08d96F303c6149a7f8CC4800BCa7fcAEB0Fd` |
+| **FeeDistributor** | `0x754C549355215022453bDd9Cd19Cbc7b52B1E490` |
+| **GovernanceToken (tGOV)** | `0x50915a301fF73278B3eaC09B42301abbC866F1Dc` |
+| **MockUSDC** | `0xfe50dA41BfC13e99E9276149d0b534609C39633E` |
+| **MockUSDT** | `0x635Ab939A2997eFDB42AD38F6A4919d8ae45b912` |
+| **MockXNOBT** | `0x4cEaa30839E3E463484c2D66900fdD6484022054` |
+| **MockXBRT** | `0xbA3B12F5633da2794c97CF330B19E510aE2BbB05` |
+| **UserProfile** | `0xdd89E04e5bB9B79775A87Fa9666C5Fe03a01e169` |
+
+All verified on [Arbiscan](https://sepolia.arbiscan.io). RWA price oracle: Chainlink ETH/USD (`0x26dA680D98e805D54f0934f46b4669149c14d1cA`).
+
 ## Features
 
 - **Marketplace**: fixed & Dutch listings with description, tags, and NFT flag; native (ETH/POL), USDC, and USDT payments via an owner-set token allowlist.
 - **Freelance**: gigs and projects with GitHub / portfolio / category / min-budget / duration metadata; milestone escrow with yield.
-- **RWA**: tokenized real-world assets with full metadata (token type, jurisdiction, issuer, risk level); holder whitelist via USDC balance.
+- **RWA**: tokenized real-world assets with full metadata (token type, jurisdiction, issuer, risk level); holder whitelist via USDC/USDT balance (multi-token whitelist).
 - **Profiles**: user profiles with optional social fields (GitHub, website, location, skills, Twitter, Telegram) plus reviews.
 - **Faucet**: mint test tokens with configurable per-token amounts.
 
