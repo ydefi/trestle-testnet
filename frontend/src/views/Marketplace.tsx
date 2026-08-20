@@ -34,9 +34,9 @@ const DG_ABI = [
   { inputs: [{ name: "listingId", type: "uint256" }, { name: "token", type: "address" }, { name: "amount", type: "uint256" }], name: "buyWithToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "listingId", type: "uint256" }], name: "currentPrice", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "listingCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "auction", type: "tuple", components: [{ name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "startedAt", type: "uint256" }] }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+{ inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "description", type: "string" }, { name: "tags", type: "string" }, { name: "isNFT", type: "bool" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "auction", type: "tuple", components: [{ name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "startedAt", type: "uint256" }] }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
+ { inputs: [{ name: "metadataURI", type: "string" }, { name: "description", type: "string" }, { name: "tags", type: "string" }, { name: "isNFT", type: "bool" }, { name: "price", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
+ { inputs: [{ name: "metadataURI", type: "string" }, { name: "description", type: "string" }, { name: "tags", type: "string" }, { name: "isNFT", type: "bool" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
 ] as const;
 
 function listingName(uri: string) {
@@ -55,7 +55,7 @@ function ListingCard({
   buyingId,
   chainCurrency,
 }: {
-  listing: { id: bigint; metadataURI: string; category: string; pricing: number; seller: string; currentPrice: bigint; auction: { startPrice: bigint; reservePrice: bigint } };
+  listing: { id: bigint; metadataURI: string; description: string; tags: string; isNFT: boolean; category: string; pricing: number; seller: string; currentPrice: bigint; auction: { startPrice: bigint; reservePrice: bigint } };
   buyToken: BuyToken;
   setBuyToken: (t: BuyToken) => void;
   handleBuy: (l: any) => void;
@@ -77,8 +77,15 @@ function ListingCard({
           <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${l.pricing === 0 ? "bg-blue-50 text-blue-600" : "bg-purple-50 text-purple-600"}`}>
             {l.pricing === 0 ? "Fixed" : "Dutch"}
           </span>
+          {l.isNFT && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">NFT</span>}
         </div>
       </div>
+      {l.description && <p className="text-xs text-gray-600 mb-2 line-clamp-2">{l.description}</p>}
+      {l.tags && (
+        <div className="flex flex-wrap gap-1 mb-2">
+          {l.tags.split(",").map((t, i) => t.trim() && <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-gray-50 text-gray-400">{t.trim()}</span>)}
+        </div>
+      )}
       <p className="text-xs text-gray-500 mb-1">Seller: {l.seller.slice(0, 6)}...{l.seller.slice(-4)}</p>
       <div className="mt-auto pt-3">
         <p className="text-xl font-bold text-gray-900">{formatUnits(l.currentPrice, 18)} {buyToken === "native" ? chainCurrency : buyToken.toUpperCase()}</p>
@@ -119,6 +126,9 @@ export default function Marketplace() {
 
   const [pricingMode, setPricingMode] = useState<PricingMode>("fixed");
   const [metaURI, setMetaURI] = useState("ipfs://QmExampleNFT — Unique Digital Artwork");
+  const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
+  const [isNFT, setIsNFT] = useState(true);
   const [category, setCategory] = useState("art");
   const [deliveryURI, setDeliveryURI] = useState("");
   const [fixedPrice, setFixedPrice] = useState("0.00001");
@@ -148,7 +158,7 @@ export default function Marketplace() {
   const { data: pricesRaw, refetch: refetchPrices } = useReadContracts({ contracts: priceCalls as any, query: { enabled: listingCount > 0 } } as any);
 
   interface Listing {
-    id: bigint; seller: Address; metadataURI: string; pricing: number;
+    id: bigint; seller: Address; metadataURI: string; description: string; tags: string; isNFT: boolean; pricing: number;
     price: bigint; auction: { startPrice: bigint; reservePrice: bigint; duration: bigint; startedAt: bigint };
     status: number; buyer: Address; escrowedAmount: bigint;
     createdAt: bigint; disputeDeadline: bigint; deliveryConfirmed: boolean;
@@ -162,12 +172,15 @@ export default function Marketplace() {
       const p = pricesRaw[i]?.result as bigint | undefined;
       if (!r) return null;
       const raw = Array.isArray(r)
-        ? { id: r[0], seller: r[1], metadataURI: r[2], pricing: r[3], price: r[4], auction: r[5], status: r[6], buyer: r[7], escrowedAmount: r[8], createdAt: r[9], disputeDeadline: r[10], deliveryConfirmed: r[11], paymentToken: r[12], category: r[13], deliveryURI: r[14] }
+        ? { id: r[0], seller: r[1], metadataURI: r[2], description: r[3], tags: r[4], isNFT: r[5], pricing: r[6], price: r[7], auction: r[8], status: r[9], buyer: r[10], escrowedAmount: r[11], createdAt: r[12], disputeDeadline: r[13], deliveryConfirmed: r[14], paymentToken: r[15], category: r[16], deliveryURI: r[17] }
         : r;
       return {
         id: raw.id,
         seller: raw.seller as Address,
         metadataURI: String(raw.metadataURI),
+        description: String(raw.description || ""),
+        tags: String(raw.tags || ""),
+        isNFT: Boolean(raw.isNFT),
         pricing: Number(raw.pricing),
         price: BigInt(raw.price),
         auction: raw.auction,
@@ -194,9 +207,9 @@ export default function Marketplace() {
   }, [listings, categoryFilter]);
 
   const EXAMPLE_LISTINGS: Listing[] = [
-    { id: 1n, seller: "0x1234...5678" as Address, metadataURI: "ipfs://QmPizzaNFT — Vintage Pixel Art Slice #01", pricing: 0, price: parseUnits("0.00001", 18), auction: { startPrice: 0n, reservePrice: 0n, duration: 0n, startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "art", deliveryURI: "", currentPrice: parseUnits("0.00001", 18) },
-    { id: 2n, seller: "0x8765...4321" as Address, metadataURI: "ipfs://QmDutchNFT — Generative Geometry Collection", pricing: 1, price: parseUnits("0.00005", 18), auction: { startPrice: parseUnits("0.00005", 18), reservePrice: parseUnits("0.00001", 18), duration: BigInt(24 * 3600), startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "collectibles", deliveryURI: "", currentPrice: parseUnits("0.00003", 18) },
-    { id: 3n, seller: "0xABCD...EF01" as Address, metadataURI: "ipfs://QmMusicNFT — Lo-Fi Beat License", pricing: 0, price: parseUnits("0.000005", 18), auction: { startPrice: 0n, reservePrice: 0n, duration: 0n, startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "music", deliveryURI: "", currentPrice: parseUnits("0.000005", 18) },
+    { id: 1n, seller: "0x1234...5678" as Address, metadataURI: "ipfs://QmPizzaNFT — Vintage Pixel Art Slice #01", description: "A rare vintage pixel-art pizza slice, hand-drawn in 1996.", tags: "pixel,art,vintage", isNFT: true, pricing: 0, price: parseUnits("0.00001", 18), auction: { startPrice: 0n, reservePrice: 0n, duration: 0n, startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "art", deliveryURI: "", currentPrice: parseUnits("0.00001", 18) },
+    { id: 2n, seller: "0x8765...4321" as Address, metadataURI: "ipfs://QmDutchNFT — Generative Geometry Collection", description: "Generative geometry collection with Dutch auction pricing.", tags: "generative,geometry", isNFT: true, pricing: 1, price: parseUnits("0.00005", 18), auction: { startPrice: parseUnits("0.00005", 18), reservePrice: parseUnits("0.00001", 18), duration: BigInt(24 * 3600), startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "collectibles", deliveryURI: "", currentPrice: parseUnits("0.00003", 18) },
+    { id: 3n, seller: "0xABCD...EF01" as Address, metadataURI: "ipfs://QmMusicNFT — Lo-Fi Beat License", description: "Lo-Fi beat license for commercial use.", tags: "music,license", isNFT: false, pricing: 0, price: parseUnits("0.000005", 18), auction: { startPrice: 0n, reservePrice: 0n, duration: 0n, startedAt: 0n }, status: 0, buyer: "0x0" as Address, escrowedAmount: 0n, createdAt: 0n, disputeDeadline: 0n, deliveryConfirmed: false, category: "music", deliveryURI: "", currentPrice: parseUnits("0.000005", 18) },
   ];
 
   // ── Helpers ──
@@ -208,13 +221,13 @@ export default function Marketplace() {
     setBusy(true); setTxHash(""); setError("");
     try {
       const hash = pricingMode === "fixed"
-        ? await write({ functionName: "listFixed", args: [metaURI, parseUnits(fixedPrice, 18), category, deliveryURI] })
-        : await write({ functionName: "listDutch", args: [metaURI, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), BigInt(Number(durationHrs) * 3600), category, deliveryURI] });
+        ? await write({ functionName: "listFixed", args: [metaURI, description, tags, isNFT, parseUnits(fixedPrice, 18), category, deliveryURI] })
+        : await write({ functionName: "listDutch", args: [metaURI, description, tags, isNFT, parseUnits(startPrice, 18), parseUnits(reservePrice, 18), BigInt(Number(durationHrs) * 3600), category, deliveryURI] });
       setTxHash(hash); setTxStatus("pending");
       const publicClient = getPublicClient(config)!;
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
       setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
-      setMetaURI(""); setCategory("art"); setDeliveryURI(""); setFixedPrice(""); setStartPrice(""); setReservePrice(""); setDurationHrs("24");
+      setMetaURI(""); setDescription(""); setTags(""); setIsNFT(true); setCategory("art"); setDeliveryURI(""); setFixedPrice(""); setStartPrice(""); setReservePrice(""); setDurationHrs("24");
       await refetchCount();
       await refetchListings();
       await refetchPrices();
@@ -361,6 +374,18 @@ export default function Marketplace() {
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Metadata URI</label>
                   <input value={metaURI} onChange={e => setMetaURI(e.target.value)} placeholder="ipfs://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Description (optional)</label>
+                  <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Product description" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-1">Tags (optional, comma separated)</label>
+                  <input value={tags} onChange={e => setTags(e.target.value)} placeholder="art, vintage, rare" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <input id="is-nft" type="checkbox" checked={isNFT} onChange={e => setIsNFT(e.target.checked)} className="h-4 w-4 rounded border-gray-300" />
+                  <label htmlFor="is-nft" className="text-xs text-gray-500">This is an NFT / digital collectible</label>
                 </div>
                 <div>
                   <label className="block text-xs text-gray-500 mb-1">Category</label>

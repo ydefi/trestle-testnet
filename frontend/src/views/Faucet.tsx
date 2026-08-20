@@ -21,14 +21,17 @@ export default function Faucet() {
   const [txHash, setTxHash] = useState("");
   const [txStatus, setTxStatus] = useState<TxState>("confirmed");
   const [error, setError] = useState("");
+  const [amounts, setAmounts] = useState<Record<string, string>>({});
 
   const TOKENS = [
-    { id: "tGOV", name: "tGOV", addr: govTokenAddr, desc: "Governance token", decimals: 18, amount: "100" },
-    { id: "USDC", name: "USDC", addr: mockUSDCAddr, desc: "Mock USD Coin", decimals: 6, amount: "1000" },
-    { id: "USDT", name: "USDT", addr: mockUSDTAddr, desc: "Mock Tether USD", decimals: 6, amount: "1000" },
-    { id: "xNOBT", name: "xNOBT", addr: mockXNOBTAddr, desc: "Testnet NOBT", decimals: 18, amount: "1000" },
-    { id: "xBRT", name: "xBRT", addr: mockXBRTAddr, desc: "Testnet Broiler", decimals: 18, amount: "1000" },
+    { id: "tGOV", name: "tGOV", addr: govTokenAddr, desc: "Governance token", decimals: 18, default: "100" },
+    { id: "USDC", name: "USDC", addr: mockUSDCAddr, desc: "Mock USD Coin", decimals: 6, default: "1000" },
+    { id: "USDT", name: "USDT", addr: mockUSDTAddr, desc: "Mock Tether USD", decimals: 6, default: "1000" },
+    { id: "xNOBT", name: "xNOBT", addr: mockXNOBTAddr, desc: "Testnet NOBT", decimals: 18, default: "1000" },
+    { id: "xBRT", name: "xBRT", addr: mockXBRTAddr, desc: "Testnet Broiler", decimals: 18, default: "1000" },
   ].filter(t => t.addr && t.addr !== "0x0000000000000000000000000000000000000000");
+
+  const amtFor = (t: typeof TOKENS[0]) => amounts[t.id] ?? t.default;
 
   const { data: balances, refetch } = useReadContracts({
     contracts: TOKENS.map(t => ({ abi: ERC20_ABI, address: t.addr, functionName: "balanceOf", args: address ? [address] : [] })),
@@ -39,7 +42,7 @@ export default function Faucet() {
     if (!address || busy) return;
     setBusy(token.id); setTxHash(""); setError("");
     try {
-      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, parseUnits(token.amount, token.decimals)], connector } as any);
+      const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, parseUnits(amtFor(token), token.decimals)], connector } as any);
       setTxHash(hash); setTxStatus("pending");
       const publicClient = getPublicClient(config)!;
       const receipt = await publicClient.waitForTransactionReceipt({ hash });
@@ -85,13 +88,21 @@ export default function Faucet() {
                     <p className="font-semibold text-gray-900">{t.name}</p>
                     <p className="text-xs text-gray-400">{t.desc}</p>
                     <p className="text-sm text-gray-600 mt-1">Balance: {bal ? formatUnits(bal, t.decimals) : "0"}</p>
+                    <input
+                      value={amtFor(t)}
+                      onChange={e => setAmounts(prev => ({ ...prev, [t.id]: e.target.value }))}
+                      type="number"
+                      min="0"
+                      placeholder={t.default}
+                      className="mt-2 w-28 border border-gray-200 rounded-lg px-2 py-1 text-sm"
+                    />
                   </div>
                   <button
                     onClick={() => mint(t)}
                     disabled={!!busy}
                     className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition"
                   >
-                    {loading ? "..." : `Mint ${t.amount}`}
+                    {loading ? "..." : `Mint ${amtFor(t)}`}
                   </button>
                 </div>
               );

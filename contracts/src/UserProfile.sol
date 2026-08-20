@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -9,6 +9,12 @@ contract UserProfile is Ownable {
         string name;
         string avatarURI;
         string bio;
+        string github;
+        string website;
+        string location;
+        string skills;
+        string twitter;
+        string telegram;
     }
 
     struct Review {
@@ -26,10 +32,20 @@ contract UserProfile is Ownable {
     mapping(address => Review[]) public reviewsReceived;
     mapping(address => mapping(address => uint256)) public lastReviewTime;
 
-    event ProfileUpdated(address indexed user, string name, string avatarURI, string bio);
+    event ProfileUpdated(
+        address indexed user,
+        string name,
+        string avatarURI,
+        string bio,
+        string github,
+        string website,
+        string location,
+        string skills,
+        string twitter,
+        string telegram
+    );
     event ReviewSubmitted(address indexed reviewer, address indexed user, uint8 rating, string comment);
 
-    error EmptyName();
     error InvalidRating();
     error SelfReview();
     error ReviewTooSoon();
@@ -41,10 +57,29 @@ contract UserProfile is Ownable {
         reviewToken = _reviewToken;
     }
 
-    function setProfile(string calldata _name, string calldata _avatarURI, string calldata _bio) external {
-        if (bytes(_name).length == 0) revert EmptyName();
-        profiles[msg.sender] = Profile(_name, _avatarURI, _bio);
-        emit ProfileUpdated(msg.sender, _name, _avatarURI, _bio);
+    function setProfile(
+        string calldata _name,
+        string calldata _avatarURI,
+        string calldata _bio,
+        string calldata _github,
+        string calldata _website,
+        string calldata _location,
+        string calldata _skills,
+        string calldata _twitter,
+        string calldata _telegram
+    ) external {
+        profiles[msg.sender] = Profile(
+            _name,
+            _avatarURI,
+            _bio,
+            _github,
+            _website,
+            _location,
+            _skills,
+            _twitter,
+            _telegram
+        );
+        emit ProfileUpdated(msg.sender, _name, _avatarURI, _bio, _github, _website, _location, _skills, _twitter, _telegram);
     }
 
     function submitReview(address _user, uint8 _rating, string calldata _comment) external {

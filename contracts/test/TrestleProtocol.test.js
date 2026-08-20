@@ -144,7 +144,7 @@ describe("Testnet Contracts", function () {
 
     it("should store asset info (one-time only)", async function () {
       await digitalRWA.connect(deployer).setAssetInfo(
-        "T-Bill Fund", "Short-term US Treasury bills",
+        "T-Bill Fund", "Short-term US Treasury bills", "", "", "", "",
         90 * 86400, 500, "US T-Bill Series X",
         Math.floor(Date.now() / 1000) + 365 * 86400,
         ethers.parseEther("1.05")
@@ -156,7 +156,7 @@ describe("Testnet Contracts", function () {
 
       await expect(
         digitalRWA.connect(deployer).setAssetInfo(
-          "Changed", "Changed", 0, 0, "", 0, 0
+          "Changed", "Changed", "", "", "", "", 0, 0, "", 0, 0
         )
       ).to.be.revertedWithCustomError(digitalRWA, "AssetInfoAlreadySet");
     });
@@ -180,7 +180,7 @@ describe("Testnet Contracts", function () {
   describe("DigitalGoods", function () {
     it("should list and buy a fixed-price item", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://test", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://test", "", "", false, price, "", "");
 
       await digitalGoods.connect(buyer).buy(1, { value: price });
 
@@ -191,7 +191,7 @@ describe("Testnet Contracts", function () {
 
     it("should complete delivery flow (no auto-delivery)", async function () {
       const price = ethers.parseEther("5");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "ipfs://delivery-file");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, price, "", "ipfs://delivery-file");
       await digitalGoods.connect(buyer).buy(1, { value: price });
 
       const listing = await digitalGoods.listings(1);
@@ -205,7 +205,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should revert if buyer underpays", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("10"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("10"), "", "");
       await expect(
         digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") })
       ).to.be.revertedWithCustomError(digitalGoods, "PriceTooLow");
@@ -216,7 +216,7 @@ describe("Testnet Contracts", function () {
       const reservePrice = ethers.parseEther("10");
       const duration = 86400;
 
-      await digitalGoods.connect(seller).listDutch("ipfs://dutch-item", startPrice, reservePrice, duration, "", "");
+      await digitalGoods.connect(seller).listDutch("ipfs://dutch-item", "", "", false, startPrice, reservePrice, duration, "", "");
 
       expect(await digitalGoods.currentPrice(1)).to.equal(startPrice);
 
@@ -238,7 +238,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should allow seller to cancel unpurchased listing", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://test", ethers.parseEther("10"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://test", "", "", false, ethers.parseEther("10"), "", "");
       await digitalGoods.connect(seller).cancelListing(1);
       const listing = await digitalGoods.listings(1);
       expect(listing.status).to.equal(2); // Cancelled
@@ -246,7 +246,7 @@ describe("Testnet Contracts", function () {
 
     it("should auto-resolve after dispute timeout", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, price, "", "");
       await digitalGoods.connect(buyer).buy(1, { value: price });
       await digitalGoods.connect(seller).submitDelivery(1, "ipfs://delivery");
 
@@ -262,7 +262,7 @@ describe("Testnet Contracts", function () {
 
     it("should allow buy with ERC20 token", async function () {
       const price = ethers.parseEther("100");
-      await digitalGoods.connect(seller).listFixed("ipfs://token-item", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://token-item", "", "", false, price, "", "");
       await digitalGoods.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(buyer.address, price);
       await mockToken.connect(buyer).approve(await digitalGoods.getAddress(), price);
@@ -274,7 +274,7 @@ describe("Testnet Contracts", function () {
 
     it("should send fees to treasury, not owner", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, price, "", "");
 
       const treasuryBalBefore = await ethers.provider.getBalance(treasury.address);
       await digitalGoods.connect(buyer).buy(1, { value: price });
@@ -295,10 +295,7 @@ describe("Testnet Contracts", function () {
     const totalBudget = ethers.parseEther("10");
 
     it("should create a fixed-budget project", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       const project = await freelancerEscrow.projects(1);
       expect(project.client).to.equal(client.address);
       expect(project.status).to.equal(0); // Open
@@ -306,36 +303,24 @@ describe("Testnet Contracts", function () {
 
     it("should reject project with < 2 milestones", async function () {
       await expect(
-        freelancerEscrow.connect(client).createProjectFixed(
-          "Single Milestone", "ipfs://brief",
-          ethers.parseEther("5"), ["Only One"], [ethers.parseEther("5")], [futureDeadline]
-        )
+        freelancerEscrow.connect(client).createProjectFixed("Single Milestone", "ipfs://brief", "", "", 0, ethers.parseEther("5"), ["Only One"], [ethers.parseEther("5")], [futureDeadline])
       ).to.be.revertedWithCustomError(freelancerEscrow, "TooFewMilestones");
     });
 
     it("should reject project with zero budget", async function () {
       await expect(
-        freelancerEscrow.connect(client).createProjectFixed(
-          "Zero Budget", "ipfs://brief",
-          0, milestoneDescs, milestoneAmounts, milestoneDeadlines
-        )
+        freelancerEscrow.connect(client).createProjectFixed("Zero Budget", "ipfs://brief", "", "", 0, 0, milestoneDescs, milestoneAmounts, milestoneDeadlines)
       ).to.be.revertedWithCustomError(freelancerEscrow, "BudgetTooLow");
     });
 
     it("should reject project with zero-amount milestone", async function () {
       await expect(
-        freelancerEscrow.connect(client).createProjectFixed(
-          "Bad Milestone", "ipfs://brief",
-          totalBudget, ["A", "B"], [0, totalBudget], [futureDeadline, futureDeadline]
-        )
+        freelancerEscrow.connect(client).createProjectFixed("Bad Milestone", "ipfs://brief", "", "", 0, totalBudget, ["A", "B"], [0, totalBudget], [futureDeadline, futureDeadline + 86400])
       ).to.be.revertedWithCustomError(freelancerEscrow, "InvalidMilestoneAmount");
     });
 
     it("should fund and accept a project", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
 
@@ -344,10 +329,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should complete full milestone workflow", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
 
@@ -368,10 +350,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should reject a milestone", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
 
@@ -390,7 +369,7 @@ describe("Testnet Contracts", function () {
       const deadlines = [futureDeadline, futureDeadline + 86400];
 
       await freelancerEscrow.connect(client).createProjectDutch(
-        "Dutch Freelance Job", "ipfs://dutch-brief",
+        "Dutch Freelance Job", "ipfs://dutch-brief", "", "", 0,
         maxBudget, reserveBudget, duration,
         descs, amts, deadlines
       );
@@ -406,10 +385,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should handle dispute", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
@@ -420,20 +396,14 @@ describe("Testnet Contracts", function () {
     });
 
     it("should only allow disputes on InProgress projects", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await expect(
         freelancerEscrow.connect(client).disputeProject(1)
       ).to.be.revertedWithCustomError(freelancerEscrow, "WrongStatus");
     });
 
     it("should allow client to cancel before acceptance", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(client).cancelProject(1);
       const p = await freelancerEscrow.projects(1);
@@ -443,18 +413,12 @@ describe("Testnet Contracts", function () {
     it("should revert if milestone amounts don't sum to budget", async function () {
       const wrongAmounts = [ethers.parseEther("1"), ethers.parseEther("1"), ethers.parseEther("1")];
       await expect(
-        freelancerEscrow.connect(client).createProjectFixed(
-          "Bad Budget", "ipfs://brief",
-          totalBudget, milestoneDescs, wrongAmounts, milestoneDeadlines
-        )
+        freelancerEscrow.connect(client).createProjectFixed("Bad Budget", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, wrongAmounts, milestoneDeadlines)
       ).to.be.revertedWithCustomError(freelancerEscrow, "BudgetTooLow");
     });
 
     it("should auto-approve milestone after timeout", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
@@ -462,16 +426,13 @@ describe("Testnet Contracts", function () {
       await ethers.provider.send("evm_increaseTime", [15 * 86400]);
       await ethers.provider.send("evm_mine");
 
-      await freelancerEscrow.connect(client).autoApproveMilestone(1, 0);
+      await freelancerEscrow.connect(freelancer).autoApproveMilestone(1, 0);
 
       const p = await freelancerEscrow.projects(1);
     });
 
     it("should send fees to treasury, not owner", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://design");
@@ -490,10 +451,7 @@ describe("Testnet Contracts", function () {
       const deadlines = [futureDeadline, futureDeadline + 86400, futureDeadline + 2 * 86400];
       const price = ethers.parseEther("10");
 
-      await freelancerEscrow.connect(freelancer).createGig(
-        "Full Stack Dev", "ipfs://portfolio",
-        price, descs, amts, deadlines
-      );
+      await freelancerEscrow.connect(freelancer).createGig("Full Stack Dev", "ipfs://portfolio", "", "", "", 0, price, descs, amts, deadlines);
 
       const gig = await freelancerEscrow.gigs(1);
       expect(gig.freelancer).to.equal(freelancer.address);
@@ -508,10 +466,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should resolve dispute via DISPUTE_AGENT_ROLE", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
@@ -524,10 +479,7 @@ describe("Testnet Contracts", function () {
     });
 
     it("should block non-agent from resolveDispute", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed(
-        "Build Website", "ipfs://brief",
-        totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines
-      );
+      await freelancerEscrow.connect(client).createProjectFixed("Build Website", "ipfs://brief", "", "", 0, totalBudget, milestoneDescs, milestoneAmounts, milestoneDeadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: totalBudget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");

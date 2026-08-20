@@ -1,17 +1,27 @@
+# Dependencies
 node_modules/
+
+# Environment & secrets
 .env
 .env.local
-*.log
-.DS_Store
+.env.*
+!.env.example
+
+# Build artifacts
 artifacts/
 cache/
-test/
+coverage/
+coverage.json
 typechain-types/
 .next/
 out/
 dist/
-verify/
-verify-*.json
+*.tsbuildinfo
+next-env.d.ts
+
+# Generated type declarations
 *.d.ts
+
+# Verification artifacts
+verify-*.json
 *-checkpoint.json
-.env.*

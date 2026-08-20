@@ -17,7 +17,7 @@ async function main() {
 
   const GOV_SUPPLY = ethers.parseEther("1000000");
   const MIN_WHITELIST = ethers.parseUnits("1000", 6); // 1000 USDC (6 decimals)
-  const RWA_META = ethers.encodeBytes32String("ipfs://QmPlaceholder");
+  const RWA_META = "ipfs://QmPlaceholder";
 
   // Load artifact
   const artifactPath = path.join(__dirname, "../artifacts/src/DigitalRWA.sol/DigitalRWA.json");

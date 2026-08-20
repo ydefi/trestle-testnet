@@ -2,28 +2,36 @@
 
 ---
 
-**Legal Disclaimer:** Trestle DeFi (trestle.website) is an independent Web3 ecosystem operating exclusively on the Polygon network. We are not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Celestia-based "Trestle Protocol" bridge project or any of its subsidiaries. 
+**Legal Disclaimer:** Trestle DeFi (trestle.website) is an independent Web3 ecosystem operating exclusively on the Polygon network. We are not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Celestia-based "Trestle Protocol" bridge project or any of its subsidiaries.
 
-Testnet platform for Trestle DeFi. Smart contracts deployed on Polygon Amoy, with a Next.js frontend.
----
+Testnet platform for Trestle DeFi. Smart contracts deployed on **Polygon Amoy**, **Base Sepolia**, and **Arbitrum Sepolia**, with a Next.js frontend.
 
-**Legal Disclaimer:** Trestle DeFi (trestle.website) is an independent Web3 ecosystem operating exclusively on the Polygon network. We are not affiliated, associated, authorized, endorsed by, or in any way officially connected with the Celestia-based "Trestle Protocol" bridge project or any of its subsidiaries. 
+## Smart Contracts
 
-## Smart Contracts (Amoy)
+| Contract | Purpose |
+|----------|---------|
+| **DigitalGoods** | Marketplace listings — fixed-price & Dutch auction with description, tags, and NFT flag |
+| **FreelancerEscrow** | Milestone-based gigs & projects (GitHub, portfolio, category, min-budget, duration) |
+| **DigitalRWA** | Tokenized real-world assets, whitelist-gated (token type, jurisdiction, issuer, risk level) |
+| **FeeDistributor** | Fee splitting (yield vault / treasury / buyback), reentrancy-guarded |
+| **GovernanceToken** | Mock governance token (tGOV) |
+| **MockUSDC / MockUSDT** | Test stablecoins (6 decimals) |
+| **MockXNOBT / MockXBRT** | Test tokens (18 decimals) |
+| **UserProfile** | On-chain profiles (all fields optional, incl. socials) & reviews |
 
-| Contract | Purpose | Address |
-|----------|---------|---------|
-| **DigitalGoods** | Fixed-price & Dutch auction listings | See `.env` `NEXT_PUBLIC_DIGITAL_GOODS` |
-| **FreelancerEscrow** | Milestone-based gigs & projects | See `.env` `NEXT_PUBLIC_FREELANCER_ESCROW` |
-| **DigitalRWA** | Tokenized real-world assets (whitelist-gated) | See `.env` `NEXT_PUBLIC_DIGITAL_RWA` |
-| **FeeDistributor** | Fee splitting (yield vault / treasury / buyback) | See `.env` `NEXT_PUBLIC_FEE_DISTRIBUTOR` |
-| **GovernanceToken** | Mock governance token | See `.env` `NEXT_PUBLIC_GOV_TOKEN` |
-| **MockUSDC / MockUSDT** | Test stablecoins (18 decimals) | See `.env` `NEXT_PUBLIC_MOCK_USDC` / `NEXT_PUBLIC_MOCK_USDT` |
-| **UserProfile** | On-chain profiles & reviews | See `.env` `NEXT_PUBLIC_USER_PROFILE` |
+Deployed addresses are maintained in `frontend/src/config/contracts.ts` (`CONTRACT_ADDRESSES`).
+
+## Features
+
+- **Marketplace**: fixed & Dutch listings with description, tags, and NFT flag; native (ETH/POL), USDC, and USDT payments via an owner-set token allowlist.
+- **Freelance**: gigs and projects with GitHub / portfolio / category / min-budget / duration metadata; milestone escrow with yield.
+- **RWA**: tokenized real-world assets with full metadata (token type, jurisdiction, issuer, risk level); holder whitelist via USDC balance.
+- **Profiles**: user profiles with optional social fields (GitHub, website, location, skills, Twitter, Telegram) plus reviews.
+- **Faucet**: mint test tokens with configurable per-token amounts.
 
 ## Tech Stack
 
-- **Smart Contracts**: Hardhat (Solidity 0.8.24)
+- **Smart Contracts**: Hardhat (Solidity 0.8.36, EVM cancun, viaIR)
 - **Frontend**: Next.js + wagmi + Reown AppKit
 - **Styling**: Tailwind CSS
 
@@ -31,17 +39,23 @@ Testnet platform for Trestle DeFi. Smart contracts deployed on Polygon Amoy, wit
 
 ```bash
 # Contracts
-cd testnet-trestle-website/contracts
+cd contracts
+npm install
 npx hardhat compile
 npx hardhat test
 npx hardhat run scripts/deploy.js --network amoy
+npx hardhat run scripts/deploy.js --network arbitrumSepolia
 
 # Frontend
-cd testnet-trestle-website/frontend
+cd frontend
 npm install
 npm run dev    # http://localhost:3000
 npm run build
 ```
+
+## Security
+
+Previously identified findings are addressed: ERC-20 payment token allowlists (`setTokenAllowed`), reentrancy guard on fee distribution, participant-only auto-approve / auto-resolve, strictly increasing milestone deadlines, single-set RWA asset info, and string RWA metadata URI. See `SECURITY.md`.
 
 ## Deploy
 

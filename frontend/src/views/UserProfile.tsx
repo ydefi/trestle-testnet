@@ -18,6 +18,12 @@ export default function UserProfilePage() {
   const [name, setName] = useState("");
   const [avatarURI, setAvatarURI] = useState("");
   const [bio, setBio] = useState("");
+  const [github, setGithub] = useState("");
+  const [website, setWebsite] = useState("");
+  const [location, setLocation] = useState("");
+  const [skills, setSkills] = useState("");
+  const [twitter, setTwitter] = useState("");
+  const [telegram, setTelegram] = useState("");
 
   // Lookup
   const [lookupAddr, setLookupAddr] = useState("");
@@ -50,16 +56,21 @@ export default function UserProfilePage() {
     query: { enabled: !!lookupTarget && userProfileReady },
   });
 
-  const myProfileData = myProfile?.[0]?.result as { name: string; avatarURI: string; bio: string } | undefined;
+  const myProfileData = myProfile?.[0]?.result as { name: string; avatarURI: string; bio: string; github: string; website: string; location: string; skills: string; twitter: string; telegram: string } | undefined;
   const myName = myProfileData?.name;
   const myAvatar = myProfileData?.avatarURI;
   const myBio = myProfileData?.bio;
+  const myGithub = myProfileData?.github;
+  const myWebsite = myProfileData?.website;
+  const myLocation = myProfileData?.location;
+  const mySkills = myProfileData?.skills;
+  const myTwitter = myProfileData?.twitter;
+  const myTelegram = myProfileData?.telegram;
 
   const handleSetProfile = async () => {
-    if (!name.trim()) return;
     setError("");
     try {
-      const hash = await setProfile(name.trim(), avatarURI.trim(), bio.trim());
+      const hash = await setProfile(name.trim(), avatarURI.trim(), bio.trim(), github.trim(), website.trim(), location.trim(), skills.trim(), twitter.trim(), telegram.trim());
       setTxHash(hash); setTxStatus("pending");
       const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
       setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
@@ -83,7 +94,7 @@ export default function UserProfilePage() {
     } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to submit review."); setTxStatus("failed"); }
   };
 
-  const lookupProfileData = lookupProfile?.[0]?.result as { name: string; avatarURI: string; bio: string } | undefined;
+  const lookupProfileData = lookupProfile?.[0]?.result as { name: string; avatarURI: string; bio: string; github: string; website: string; location: string; skills: string; twitter: string; telegram: string } | undefined;
   const lookupReviewCount = lookupProfile?.[1]?.result as bigint | undefined;
   const lookupReviews = lookupProfile?.[2]?.result as { rating: number; comment: string; timestamp: bigint }[] | undefined;
 
@@ -94,19 +105,31 @@ export default function UserProfilePage() {
       {/* My Profile */}
       <section className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-700">My Profile</h3>
-        {myName ? (
+        {myName || myGithub || myWebsite || myLocation || mySkills || myTwitter || myTelegram ? (
           <div className="space-y-1 text-sm text-gray-600">
-            <p><span className="font-medium text-gray-800">Name:</span> {myName}</p>
+            {myName && <p><span className="font-medium text-gray-800">Name:</span> {myName}</p>}
             {myAvatar && <p><span className="font-medium text-gray-800">Avatar:</span> <span className="break-all">{myAvatar}</span></p>}
             {myBio && <p><span className="font-medium text-gray-800">Bio:</span> {myBio}</p>}
+            {myGithub && <p><span className="font-medium text-gray-800">GitHub:</span> <span className="break-all">{myGithub}</span></p>}
+            {myWebsite && <p><span className="font-medium text-gray-800">Website:</span> <span className="break-all">{myWebsite}</span></p>}
+            {myLocation && <p><span className="font-medium text-gray-800">Location:</span> {myLocation}</p>}
+            {mySkills && <p><span className="font-medium text-gray-800">Skills:</span> {mySkills}</p>}
+            {myTwitter && <p><span className="font-medium text-gray-800">Twitter/X:</span> <span className="break-all">{myTwitter}</span></p>}
+            {myTelegram && <p><span className="font-medium text-gray-800">Telegram:</span> <span className="break-all">{myTelegram}</span></p>}
           </div>
         ) : (
           <p className="text-sm text-gray-400 italic">No profile set yet.</p>
         )}
         <div className="border-t pt-4 space-y-3">
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Name (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           <input value={avatarURI} onChange={e => setAvatarURI(e.target.value)} placeholder="Avatar URI (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           <textarea value={bio} onChange={e => setBio(e.target.value)} placeholder="Bio (optional)" rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm resize-none" />
+          <input value={github} onChange={e => setGithub(e.target.value)} placeholder="GitHub (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={website} onChange={e => setWebsite(e.target.value)} placeholder="Website (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={location} onChange={e => setLocation(e.target.value)} placeholder="Location (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={skills} onChange={e => setSkills(e.target.value)} placeholder="Skills, comma separated (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={twitter} onChange={e => setTwitter(e.target.value)} placeholder="Twitter/X (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+          <input value={telegram} onChange={e => setTelegram(e.target.value)} placeholder="Telegram (optional)" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm" />
           <button onClick={handleSetProfile} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors">
             Save Profile
           </button>
@@ -125,6 +148,12 @@ export default function UserProfilePage() {
             <p><span className="font-medium text-gray-800">Name:</span> {lookupProfileData.name || <span className="italic text-gray-400">not set</span>}</p>
             {lookupProfileData.avatarURI && <p><span className="font-medium text-gray-800">Avatar:</span> <span className="break-all">{lookupProfileData.avatarURI}</span></p>}
             {lookupProfileData.bio && <p><span className="font-medium text-gray-800">Bio:</span> {lookupProfileData.bio}</p>}
+            {lookupProfileData.github && <p><span className="font-medium text-gray-800">GitHub:</span> <span className="break-all">{lookupProfileData.github}</span></p>}
+            {lookupProfileData.website && <p><span className="font-medium text-gray-800">Website:</span> <span className="break-all">{lookupProfileData.website}</span></p>}
+            {lookupProfileData.location && <p><span className="font-medium text-gray-800">Location:</span> {lookupProfileData.location}</p>}
+            {lookupProfileData.skills && <p><span className="font-medium text-gray-800">Skills:</span> {lookupProfileData.skills}</p>}
+            {lookupProfileData.twitter && <p><span className="font-medium text-gray-800">Twitter/X:</span> <span className="break-all">{lookupProfileData.twitter}</span></p>}
+            {lookupProfileData.telegram && <p><span className="font-medium text-gray-800">Telegram:</span> <span className="break-all">{lookupProfileData.telegram}</span></p>}
             <p><span className="font-medium text-gray-800">Reviews:</span> {lookupReviewCount?.toString() || "0"}</p>
             {lookupReviews && lookupReviews.length > 0 && (
               <div className="space-y-2 mt-2">

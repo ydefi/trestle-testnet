@@ -9,7 +9,7 @@ async function main() {
   const WHITELIST_TOKEN = "0x27fcAdD5142ECB1b6FC13314a2bDfB71dC92CeF3"; // Mock USDC (Base Sepolia)
   const GOV_SUPPLY = hre.ethers.parseEther("1000000");
   const MIN_WHITELIST = hre.ethers.parseUnits("1000", 6); // 1000 USDC (6 decimals)
-  const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
+  const RWA_META = "ipfs://QmPlaceholder";
 
   console.log("Deploying DigitalRWA...");
   const DigitalRWA = await hre.ethers.getContractFactory("DigitalRWA");

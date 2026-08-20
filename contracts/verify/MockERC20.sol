@@ -621,7 +621,7 @@ abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC20Errors {
 // File src/mocks/MockERC20.sol
 
 // Original license: SPDX_License_Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 contract MockERC20 is ERC20 {
     uint8 private _dec;

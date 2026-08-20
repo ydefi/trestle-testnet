@@ -24,6 +24,10 @@ export default function Freelance() {
   // ── Create Gig form ──
   const [gigTitle, setGigTitle] = useState("Web Dev");
   const [gigDesc, setGigDesc] = useState("ipfs://QmDescription");
+  const [gigGithub, setGigGithub] = useState("");
+  const [gigPortfolio, setGigPortfolio] = useState("");
+  const [gigCategory, setGigCategory] = useState("development");
+  const [gigMinBudget, setGigMinBudget] = useState("0");
   const [gigPrice, setGigPrice] = useState("0.00001");
   const [gigMsDesc, setGigMsDesc] = useState("Design,Develop,Deploy");
   const [gigMsAmt, setGigMsAmt] = useState("0.000003,0.000004,0.000003");
@@ -32,6 +36,9 @@ export default function Freelance() {
   // ── Create Project form ──
   const [projTitle, setProjTitle] = useState("Build a DApp");
   const [projDesc, setProjDesc] = useState("ipfs://QmProjectSpec");
+  const [projGithub, setProjGithub] = useState("");
+  const [projCategory, setProjCategory] = useState("development");
+  const [projDurationDays, setProjDurationDays] = useState("30");
   const [projBudget, setProjBudget] = useState("0.00003");
   const [projMsDesc, setProjMsDesc] = useState("Frontend,Smart Contract,Testing");
   const [projMsAmt, setProjMsAmt] = useState("0.00001,0.00001,0.00001");
@@ -57,7 +64,7 @@ export default function Freelance() {
       const hash = await writeContractAsync({
         abi: freelancerEscrowABI, address: addr,
         functionName: "createGig",
-        args: [gigTitle, gigDesc, parseUnits(gigPrice, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
+        args: [gigTitle, gigDesc, gigGithub, gigPortfolio, gigCategory, parseUnits(gigMinBudget || "0", 18), parseUnits(gigPrice, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
         chainId, connector,
       } as any);
       setTxHash(hash); setTxStatus("pending");
@@ -73,7 +80,7 @@ export default function Freelance() {
       const hash = await writeContractAsync({
         abi: freelancerEscrowABI, address: addr,
         functionName: "createProjectFixed",
-        args: [projTitle, projDesc, parseUnits(projBudget, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
+        args: [projTitle, projDesc, projGithub, projCategory, BigInt(projDurationDays || 0), parseUnits(projBudget, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
         chainId, connector,
       } as any);
       setTxHash(hash); setTxStatus("pending");
@@ -109,7 +116,7 @@ export default function Freelance() {
     return gigIds.map((id, i) => {
       const r = gigsRaw[i]?.result as any;
       if (!r) return null;
-      return { id: BigInt(id), freelancer: r[1] as Address, title: r[2] as string, desc: r[3] as string, price: r[4] as bigint, active: r[5] as boolean };
+      return { id: BigInt(id), freelancer: r[1] as Address, title: r[2] as string, desc: r[3] as string, github: r[4] as string, portfolio: r[5] as string, category: r[6] as string, minBudget: r[7] as bigint, price: r[8] as bigint, active: r[9] as boolean };
     }).filter((g): g is NonNullable<typeof g> => g != null);
   }, [gigsRaw, gigIds]);
 
@@ -118,7 +125,7 @@ export default function Freelance() {
     return projIds.map((id, i) => {
       const r = projsRaw[i]?.result as any;
       if (!r) return null;
-      return { id: BigInt(id), client: r.client as Address, freelancer: r.freelancer as Address, status: Number(r.status), totalBudget: r.totalBudget as bigint, escrowed: r.escrowedAmount as bigint, title: r.title as string, desc: r.descriptionURI as string };
+      return { id: BigInt(id), client: r.client as Address, freelancer: r.freelancer as Address, status: Number(r.status), totalBudget: r.totalBudget as bigint, escrowed: r.escrowedAmount as bigint, title: r.title as string, desc: r.descriptionURI as string, github: r.github as string, category: r.category as string, durationDays: r.durationDays as bigint };
     }).filter((p): p is NonNullable<typeof p> => p != null);
   }, [projsRaw, projIds]);
 
@@ -182,6 +189,9 @@ export default function Freelance() {
                       <span className="font-medium text-gray-900">{g.title}</span>
                       <span className="text-emerald-600 font-semibold">{formatUnits(g.price, 18)} {chainCurrency}</span>
                     </div>
+                    {g.category && <p className="text-xs text-gray-500 mb-1">Category: {g.category}</p>}
+                    {g.github && <p className="text-xs text-gray-400 mb-1 break-all">GitHub: {g.github}</p>}
+                    {g.portfolio && <p className="text-xs text-gray-400 mb-1 break-all">Portfolio: {g.portfolio}</p>}
                     <p className="text-xs text-gray-400 mb-2">By {g.freelancer.slice(0, 6)}...{g.freelancer.slice(-4)}</p>
                     <button onClick={() => handleHire(g.id, g.price)} disabled={busy || isOwner(g.freelancer)}
                       className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-xs font-medium rounded-lg transition">
@@ -206,8 +216,10 @@ export default function Freelance() {
                       <span className="font-medium text-gray-900">{p.title}</span>
                       <span className="text-blue-600 font-semibold">{formatUnits(p.totalBudget, 18)} {chainCurrency}</span>
                     </div>
+                    {p.category && <p className="text-xs text-gray-500 mb-1">Category: {p.category}</p>}
+                    {p.github && <p className="text-xs text-gray-400 mb-1 break-all">GitHub: {p.github}</p>}
                     <p className="text-xs text-gray-400 mb-2">Client: {p.client.slice(0, 6)}...{p.client.slice(-4)}</p>
-                    <p className="text-xs text-gray-400">Status: {STATUS[p.status] || "Unknown"} · Escrowed: {formatUnits(p.escrowed, 18)} {chainCurrency}</p>
+                    <p className="text-xs text-gray-400">Status: {STATUS[p.status] || "Unknown"} · Escrowed: {formatUnits(p.escrowed, 18)} {chainCurrency}{p.durationDays ? ` · ${p.durationDays} days` : ""}</p>
                   </div>
                 ))}
               </div>
@@ -222,6 +234,10 @@ export default function Freelance() {
           <p className="text-xs text-gray-500">List your service with milestone-based payments.</p>
           {[{ label: "Title", val: gigTitle, set: setGigTitle },
             { label: "Description URI (ipfs://...)", val: gigDesc, set: setGigDesc },
+            { label: "GitHub (optional)", val: gigGithub, set: setGigGithub },
+            { label: "Portfolio URI (optional)", val: gigPortfolio, set: setGigPortfolio },
+            { label: "Category (optional)", val: gigCategory, set: setGigCategory },
+            { label: `Min Budget (${chainCurrency}, optional)`, val: gigMinBudget, set: setGigMinBudget, type: "number" },
             { label: `Price (${chainCurrency})`, val: gigPrice, set: setGigPrice, type: "number" },
             { label: "Milestone Descriptions (comma-sep)", val: gigMsDesc, set: setGigMsDesc },
             { label: "Milestone Amounts (comma-sep)", val: gigMsAmt, set: setGigMsAmt },
@@ -246,6 +262,9 @@ export default function Freelance() {
           <p className="text-xs text-gray-500">Post a fixed-budget project with milestones for freelancers to apply.</p>
           {[{ label: "Title", val: projTitle, set: setProjTitle },
             { label: "Description URI (ipfs://...)", val: projDesc, set: setProjDesc },
+            { label: "GitHub / Repo (optional)", val: projGithub, set: setProjGithub },
+            { label: "Category (optional)", val: projCategory, set: setProjCategory },
+            { label: "Duration (days, optional)", val: projDurationDays, set: setProjDurationDays, type: "number" },
             { label: `Total Budget (${chainCurrency})`, val: projBudget, set: setProjBudget, type: "number" },
             { label: "Milestone Descriptions (comma-sep)", val: projMsDesc, set: setProjMsDesc },
             { label: "Milestone Amounts (comma-sep)", val: projMsAmt, set: setProjMsAmt },

@@ -10,6 +10,10 @@ import TxStatus, { type TxState } from "../components/TxStatus";
 const EXAMPLE_INFO = {
   name: "Trestle Treasury Bill Fund",
   description: "Short-term US Treasury bills tokenized on Polygon Amoy — 4.5% APY, 90-day lockup.",
+  tokenType: "Treasury Bill",
+  jurisdiction: "USA",
+  issuer: "Trestle DeFi",
+  riskLevel: "Low",
   lockupDuration: 90n * 86400n,
   expectedReturnBps: 450n,
   underlyingAsset: "US T-Bill Series X (90d maturity)",
@@ -24,6 +28,10 @@ function parseAssetInfo(raw: unknown): typeof EXAMPLE_INFO | undefined {
   return {
     name: typeof r.name === "string" ? r.name : "",
     description: typeof r.description === "string" ? r.description : "",
+    tokenType: typeof r.tokenType === "string" ? r.tokenType : "",
+    jurisdiction: typeof r.jurisdiction === "string" ? r.jurisdiction : "",
+    issuer: typeof r.issuer === "string" ? r.issuer : "",
+    riskLevel: typeof r.riskLevel === "string" ? r.riskLevel : "",
     lockupDuration: typeof r.lockupDuration === "bigint" ? r.lockupDuration : typeof r.lockupDuration === "number" ? BigInt(r.lockupDuration) : 0n,
     expectedReturnBps: typeof r.expectedReturnBps === "bigint" ? r.expectedReturnBps : typeof r.expectedReturnBps === "number" ? BigInt(r.expectedReturnBps) : 0n,
     underlyingAsset: typeof r.underlyingAsset === "string" ? r.underlyingAsset : "",
@@ -197,6 +205,10 @@ export default function RWA() {
         <div className="space-y-3 text-sm">
           <div className="flex justify-between"><span className="text-gray-500">Name</span><span className="font-medium">{info.name}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Description</span><span className="font-medium text-right max-w-[60%]">{info.description}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Token Type</span><span className="font-medium">{info.tokenType || "—"}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Jurisdiction</span><span className="font-medium">{info.jurisdiction || "—"}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Issuer</span><span className="font-medium">{info.issuer || "—"}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Risk Level</span><span className="font-medium">{info.riskLevel || "—"}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Underlying Asset</span><span className="font-medium">{info.underlyingAsset}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Supply</span><span className="font-medium">{totalSupply ? formatUnits(totalSupply as bigint, 18) : "0"} / {cap ? formatUnits(cap as bigint, 18) : "1,000,000"}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Your Balance</span><span className="font-medium">{userBalance ? formatUnits(userBalance as bigint, 18) : "0"} DA1</span></div>

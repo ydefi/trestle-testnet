@@ -621,7 +621,7 @@ abstract contract ERC20 is Context, IERC20, IERC20Metadata, IERC20Errors {
 // File src/MockGovernanceToken.sol
 
 // Original license: SPDX_License_Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 contract MockGovernanceToken is ERC20 {
     uint8 private _dec;

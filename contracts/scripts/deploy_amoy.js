@@ -89,7 +89,7 @@ const DEPLOYERS = {
   },
   digitalRWA: async () => {
     const [deployer] = await hre.ethers.getSigners();
-    const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
+    const RWA_META = "ipfs://QmPlaceholder";
     const Factory = await hre.ethers.getContractFactory("DigitalRWA");
     const c = await Factory.deploy(
       "Trestle Real Asset 1", "TRA1",

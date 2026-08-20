@@ -74,7 +74,7 @@ async function main() {
   const metaURI = "ipfs://QmTest123 -- End-to-End Test Item";
   const category = "art";
   const deliveryURI = "ipfs://QmDeliveryFile";
-  tx = await dg.connect(deployer).listFixed(metaURI, LISTING_PRICE, category, deliveryURI);
+  tx = await dg.connect(deployer).listFixed(metaURI, "", "", false, LISTING_PRICE, category, deliveryURI);
   const receipt = await tx.wait();
   const listingIdTopic = receipt.logs.find(l => l.fragment?.name === "Listed") || receipt.logs[0];
   // Get listingId by reading listingCount-1
@@ -105,7 +105,7 @@ async function main() {
   // --- UserProfile: Set deployer profile ---
   console.log("=== [8] UserProfile: Set profile ===");
   const up = await ethers.getContractAt("UserProfile", USER_PROFILE);
-  tx = await up.connect(deployer).setProfile("Trestle Deployer", "ipfs://avatar", "Building the decentralized marketplace");
+  tx = await up.connect(deployer).setProfile("Trestle Deployer", "ipfs://avatar", "Building the decentralized marketplace", "", "", "", "", "", "");
   await tx.wait();
   const profile = await up.getProfile(deployer.address);
   console.log("  Name:", profile.name);

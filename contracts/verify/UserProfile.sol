@@ -222,7 +222,7 @@ interface IERC20 {
 // File src/UserProfile.sol
 
 // Original license: SPDX_License_Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 
 contract UserProfile is Ownable {

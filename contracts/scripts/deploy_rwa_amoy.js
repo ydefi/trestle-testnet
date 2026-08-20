@@ -11,7 +11,7 @@ async function main() {
   console.log("Deployer:", deployer.address);
   console.log("Balance:", hre.ethers.formatEther(bal), "POL\n");
 
-  const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
+  const RWA_META = "ipfs://QmPlaceholder";
   const DigitalRWA = await hre.ethers.getContractFactory("DigitalRWA");
   const digitalRWA = await DigitalRWA.deploy(
     "Trestle Real Asset 1", "TRA1",

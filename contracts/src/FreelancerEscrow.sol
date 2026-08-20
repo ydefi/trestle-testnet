@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
@@ -30,6 +30,10 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         address freelancer;
         string title;
         string descriptionURI;
+        string github;
+        string portfolioURI;
+        string category;
+        uint256 minBudget;
         uint256 price;
         bool active;
         GigMilestone[] milestones;
@@ -50,6 +54,9 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         address freelancer;
         string title;
         string descriptionURI;
+        string github;
+        string category;
+        uint256 durationDays;
         PricingMode pricing;
         uint256 totalBudget;
         DutchAuctionLib.Params auction;
@@ -281,6 +288,9 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     function createProjectFixed(
         string calldata _title,
         string calldata _descriptionURI,
+        string calldata _github,
+        string calldata _category,
+        uint256 _durationDays,
         uint256 _totalBudget,
         string[] calldata _milestoneDescriptions,
         uint256[] calldata _milestoneAmounts,
@@ -295,6 +305,9 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         p.client = msg.sender;
         p.title = _title;
         p.descriptionURI = _descriptionURI;
+        p.github = _github;
+        p.category = _category;
+        p.durationDays = _durationDays;
         p.pricing = PricingMode.Fixed;
         p.totalBudget = _totalBudget;
         p.status = ProjectStatus.Open;
@@ -310,6 +323,9 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     function createProjectDutch(
         string calldata _title,
         string calldata _descriptionURI,
+        string calldata _github,
+        string calldata _category,
+        uint256 _durationDays,
         uint256 _maxBudget,
         uint256 _reserveBudget,
         uint256 _duration,
@@ -327,6 +343,9 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         p.client = msg.sender;
         p.title = _title;
         p.descriptionURI = _descriptionURI;
+        p.github = _github;
+        p.category = _category;
+        p.durationDays = _durationDays;
         p.pricing = PricingMode.DutchAuction;
         p.totalBudget = _maxBudget;
         p.auction = DutchAuctionLib.Params(_maxBudget, _reserveBudget, _duration, block.timestamp);
@@ -343,6 +362,10 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     function createGig(
         string calldata _title,
         string calldata _descriptionURI,
+        string calldata _github,
+        string calldata _portfolioURI,
+        string calldata _category,
+        uint256 _minBudget,
         uint256 _price,
         string[] calldata _milestoneDescriptions,
         uint256[] calldata _milestoneAmounts,
@@ -357,6 +380,10 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         g.freelancer = msg.sender;
         g.title = _title;
         g.descriptionURI = _descriptionURI;
+        g.github = _github;
+        g.portfolioURI = _portfolioURI;
+        g.category = _category;
+        g.minBudget = _minBudget;
         g.price = _price;
         g.active = true;
         for (uint256 i; i < _milestoneDescriptions.length; i++) {

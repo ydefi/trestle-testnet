@@ -282,10 +282,10 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("asset info one-time only", async function () {
-      await digitalRWA.connect(deployer).setAssetInfo("Fund", "Desc", 90, 500, "T-Bill", FUTURE(), ethers.parseEther("1.05"));
+      await digitalRWA.connect(deployer).setAssetInfo("Fund", "Desc", "", "", "", "", 90, 500, "T-Bill", FUTURE(), ethers.parseEther("1.05"));
       const info = await digitalRWA.assetInfo();
       expect(info.name).to.equal("Fund");
-      await expect(digitalRWA.connect(deployer).setAssetInfo("X", "X", 0, 0, "", 0, 0))
+      await expect(digitalRWA.connect(deployer).setAssetInfo("X", "X", "", "", "", "", 0, 0, "", 0, 0))
         .to.be.revertedWithCustomError(digitalRWA, "AssetInfoAlreadySet");
     });
 
@@ -315,7 +315,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
   describe("DigitalGoods", function () {
     it("list and buy fixed-price", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "ebooks", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, price, "ebooks", "");
       await digitalGoods.connect(buyer).buy(1, { value: price });
       const l = await digitalGoods.listings(1);
       expect(l.status).to.equal(1);
@@ -323,26 +323,26 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert buy by seller themselves", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("1"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("1"), "", "");
       await expect(digitalGoods.connect(seller).buy(1, { value: ethers.parseEther("1") }))
         .to.be.revertedWithCustomError(digitalGoods, "WrongStatus");
     });
 
     it("revert buy on inactive listing", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("1"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("1"), "", "");
       await digitalGoods.connect(seller).cancelListing(1);
       await expect(digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("1") }))
         .to.be.revertedWithCustomError(digitalGoods, "WrongStatus");
     });
 
     it("revert buy with underpayment", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("10"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("10"), "", "");
       await expect(digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") }))
         .to.be.revertedWithCustomError(digitalGoods, "PriceTooLow");
     });
 
     it("refund excess ETH on overpayment", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       const balBefore = await ethers.provider.getBalance(buyer.address);
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("10") });
       const balAfter = await ethers.provider.getBalance(buyer.address);
@@ -352,7 +352,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("send fees to treasury", async function () {
       const price = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listFixed("ipfs://item", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, price, "", "");
       const tBefore = await ethers.provider.getBalance(treasury.address);
       await digitalGoods.connect(buyer).buy(1, { value: price });
       const fee = price * FEE / BPS;
@@ -360,7 +360,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("delivery flow: submit -> confirm", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "ipfs://delivery");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "ipfs://delivery");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await digitalGoods.connect(seller).submitDelivery(1, "ipfs://hash");
       await digitalGoods.connect(buyer).confirmDelivery(1);
@@ -368,28 +368,28 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert confirm by non-buyer", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await expect(digitalGoods.connect(seller).confirmDelivery(1))
         .to.be.revertedWithCustomError(digitalGoods, "NotBuyer");
     });
 
     it("revert submit by non-seller", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await expect(digitalGoods.connect(buyer).submitDelivery(1, "ipfs://hash"))
         .to.be.revertedWithCustomError(digitalGoods, "NotSeller");
     });
 
     it("dispute flow", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await digitalGoods.connect(buyer).dispute(1);
       expect((await digitalGoods.listings(1)).status).to.equal(3); // Disputed
     });
 
     it("auto-resolve dispute after timeout favors buyer", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await digitalGoods.connect(buyer).dispute(1);
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
@@ -399,7 +399,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("auto-resolve after timeout with no dispute favors seller", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
       await ethers.provider.send("evm_mine");
@@ -408,13 +408,13 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("seller cancels before purchase", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await digitalGoods.connect(seller).cancelListing(1);
       expect((await digitalGoods.listings(1)).status).to.equal(2);
     });
 
     it("revert cancel by non-seller", async function () {
-      await digitalGoods.connect(seller).listFixed("ipfs://item", ethers.parseEther("5"), "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, ethers.parseEther("5"), "", "");
       await expect(digitalGoods.connect(buyer).cancelListing(1))
         .to.be.revertedWithCustomError(digitalGoods, "NotSeller");
     });
@@ -422,7 +422,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     it("Dutch auction price decreases over time", async function () {
       const start = ethers.parseEther("100");
       const reserve = ethers.parseEther("10");
-      await digitalGoods.connect(seller).listDutch("ipfs://dutch", start, reserve, 86400, "", "");
+      await digitalGoods.connect(seller).listDutch("ipfs://dutch", "", "", false, start, reserve, 86400, "", "");
       expect(await digitalGoods.currentPrice(1)).to.equal(start);
       await ethers.provider.send("evm_increaseTime", [43200]);
       await ethers.provider.send("evm_mine");
@@ -436,7 +436,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("buy with ERC20 token", async function () {
       const price = ethers.parseEther("100");
-      await digitalGoods.connect(seller).listFixed("ipfs://token-item", price, "", "");
+      await digitalGoods.connect(seller).listFixed("ipfs://token-item", "", "", false, price, "", "");
       await digitalGoods.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(buyer.address, price);
       await mockToken.connect(buyer).approve(await digitalGoods.getAddress(), price);
@@ -445,7 +445,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert list with zero price", async function () {
-      await expect(digitalGoods.connect(seller).listFixed("ipfs://item", 0, "", ""))
+      await expect(digitalGoods.connect(seller).listFixed("ipfs://item", "", "", false, 0, "", ""))
         .to.be.revertedWithCustomError(digitalGoods, "PriceTooLow");
     });
 
@@ -470,30 +470,30 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     const budget = ethers.parseEther("10");
 
     it("create fixed project", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://brief", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://brief", "", "", 0, budget, descs, amts, deadlines);
       const p = await freelancerEscrow.projects(1);
       expect(p.client).to.equal(client.address);
       expect(p.status).to.equal(0);
     });
 
     it("revert < 2 milestones", async function () {
-      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", budget, ["Only"], [budget], [FUTURE()]))
+      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", "", "", 0, budget, ["Only"], [budget], [FUTURE()]))
         .to.be.revertedWithCustomError(freelancerEscrow, "TooFewMilestones");
     });
 
     it("revert zero budget", async function () {
-      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", 0, descs, amts, deadlines))
+      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", "", "", 0, 0, descs, amts, deadlines))
         .to.be.revertedWithCustomError(freelancerEscrow, "BudgetTooLow");
     });
 
     it("revert milestone amount mismatch", async function () {
       const wrong = [ethers.parseEther("1"), ethers.parseEther("1")];
-      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", budget, descs, wrong, deadlines))
+      await expect(freelancerEscrow.connect(client).createProjectFixed("X", "ipfs://", "", "", 0, budget, descs, wrong, deadlines))
         .to.be.revertedWithCustomError(freelancerEscrow, "BudgetTooLow");
     });
 
     it("fund and accept project", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       const p = await freelancerEscrow.projects(1);
@@ -502,13 +502,13 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert fund by non-client", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await expect(freelancerEscrow.connect(user).fundProject(1, { value: budget }))
         .to.be.revertedWithCustomError(freelancerEscrow, "NotClient");
     });
 
     it("revert fund when not Open", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await expect(freelancerEscrow.connect(client).fundProject(1, { value: budget }))
@@ -516,7 +516,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("full milestone workflow: submit -> approve -> complete", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
 
@@ -531,7 +531,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("reject milestone", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://bad");
@@ -541,7 +541,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("auto-approve after timeout", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
@@ -553,7 +553,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("dispute and resolve via agent", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
@@ -565,7 +565,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert resolveDispute by non-agent", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(client).disputeProject(1);
@@ -573,7 +573,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("auto-resolve dispute after timeout", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(client).disputeProject(1);
@@ -584,20 +584,20 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("cancel project before acceptance", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(client).cancelProject(1);
       expect((await freelancerEscrow.projects(1)).status).to.equal(3);
     });
 
     it("revert cancel by non-client", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await expect(freelancerEscrow.connect(user).cancelProject(1))
         .to.be.revertedWithCustomError(freelancerEscrow, "NotClient");
     });
 
     it("revert cancel when not Open", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await expect(freelancerEscrow.connect(client).cancelProject(1))
@@ -608,7 +608,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       const max = ethers.parseEther("20");
       const reserve = ethers.parseEther("10");
       const dAmts = [ethers.parseEther("10"), ethers.parseEther("10")];
-      await freelancerEscrow.connect(client).createProjectDutch("Dutch Job", "ipfs://", max, reserve, 86400, descs, dAmts, deadlines);
+      await freelancerEscrow.connect(client).createProjectDutch("Dutch Job", "ipfs://", "", "", 0, max, reserve, 86400, descs, dAmts, deadlines);
       expect(await freelancerEscrow.currentBudget(1)).to.equal(max);
       await ethers.provider.send("evm_increaseTime", [43200]);
       await ethers.provider.send("evm_mine");
@@ -623,7 +623,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       const gAmts = [ethers.parseEther("2"), ethers.parseEther("5"), ethers.parseEther("3")];
       const gDeadlines = [FUTURE(), FUTURE() + 86400, FUTURE() + 2 * 86400];
 
-      await freelancerEscrow.connect(freelancer).createGig("Full Stack", "ipfs://portfolio", price, gDescs, gAmts, gDeadlines);
+      await freelancerEscrow.connect(freelancer).createGig("Full Stack", "ipfs://portfolio", "", "", "", 0, price, gDescs, gAmts, gDeadlines);
       const gig = await freelancerEscrow.gigs(1);
       expect(gig.freelancer).to.equal(freelancer.address);
       expect(gig.active).to.be.true;
@@ -636,7 +636,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("revert hire inactive gig", async function () {
       const price = ethers.parseEther("10");
-      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", price, descs, amts, deadlines);
+      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", "", "", "", 0, price, descs, amts, deadlines);
       await freelancerEscrow.connect(freelancer).cancelGig(1);
       await expect(freelancerEscrow.connect(client).hireGig(1, { value: price }))
         .to.be.revertedWithCustomError(freelancerEscrow, "WrongStatus");
@@ -644,7 +644,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("update gig", async function () {
       const price = ethers.parseEther("10");
-      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", price, descs, amts, deadlines);
+      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", "", "", "", 0, price, descs, amts, deadlines);
       const newAmts = [ethers.parseEther("4"), ethers.parseEther("6")];
       await freelancerEscrow.connect(freelancer).updateGig(1, "Updated", "ipfs://v2", ethers.parseEther("10"), descs, newAmts, deadlines);
       const gig = await freelancerEscrow.gigs(1);
@@ -654,13 +654,13 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("revert update gig by non-freelancer", async function () {
       const price = ethers.parseEther("10");
-      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", price, descs, amts, deadlines);
+      await freelancerEscrow.connect(freelancer).createGig("Gig", "ipfs://", "", "", "", 0, price, descs, amts, deadlines);
       await expect(freelancerEscrow.connect(client).updateGig(1, "X", "ipfs://", price, descs, amts, deadlines))
         .to.be.revertedWithCustomError(freelancerEscrow, "NotFreelancer");
     });
 
     it("fees go to treasury on milestone approval", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://design");
@@ -672,7 +672,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert submit milestone on cancelled project", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(client).cancelProject(1);
       await expect(freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://"))
@@ -680,7 +680,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("revert approve non-submitted milestone", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(client).fundProject(1, { value: budget });
       await freelancerEscrow.connect(freelancer).acceptProject(1);
       await expect(freelancerEscrow.connect(client).approveMilestone(1, 0))
@@ -693,7 +693,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     });
 
     it("fundProjectWithToken", async function () {
-      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", budget, descs, amts, deadlines);
+      await freelancerEscrow.connect(client).createProjectFixed("Build", "ipfs://", "", "", 0, budget, descs, amts, deadlines);
       await freelancerEscrow.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(client.address, budget);
       await mockToken.connect(client).approve(await freelancerEscrow.getAddress(), budget);
@@ -710,33 +710,34 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
   describe("UserProfile", function () {
     it("set and get profile", async function () {
-      await userProfile.connect(user).setProfile("Alice", "ipfs://avatar", "Builder");
+      await userProfile.connect(user).setProfile("Alice", "ipfs://avatar", "Builder", "", "", "", "", "", "");
       const p = await userProfile.getProfile(user.address);
       expect(p.name).to.equal("Alice");
       expect(p.avatarURI).to.equal("ipfs://avatar");
     });
 
-    it("revert empty name", async function () {
-      await expect(userProfile.connect(user).setProfile("", "", ""))
-        .to.be.revertedWithCustomError(userProfile, "EmptyName");
+    it("allow empty profile (all fields optional)", async function () {
+      await userProfile.connect(user).setProfile("", "", "", "", "", "", "", "", "");
+      const p = await userProfile.getProfile(user.address);
+      expect(p.name).to.equal("");
     });
 
     it("submit review with token gate", async function () {
       await mockToken.connect(deployer).mint(buyer.address, ethers.parseEther("2"));
-      await userProfile.connect(user).setProfile("Alice", "", "");
+      await userProfile.connect(user).setProfile("Alice", "", "", "", "", "", "", "", "");
       await userProfile.connect(buyer).submitReview(user.address, 5, "Great work!");
       expect(await userProfile.getReviewCount(user.address)).to.equal(1);
     });
 
     it("revert review without tokens", async function () {
-      await userProfile.connect(user).setProfile("Alice", "", "");
+      await userProfile.connect(user).setProfile("Alice", "", "", "", "", "", "", "", "");
       await expect(userProfile.connect(buyer).submitReview(user.address, 5, "x"))
         .to.be.revertedWithCustomError(userProfile, "InsufficientBalance");
     });
 
     it("revert self-review", async function () {
       await mockToken.connect(deployer).mint(user.address, ethers.parseEther("2"));
-      await userProfile.connect(user).setProfile("Alice", "", "");
+      await userProfile.connect(user).setProfile("Alice", "", "", "", "", "", "", "", "");
       await expect(userProfile.connect(user).submitReview(user.address, 5, "x"))
         .to.be.revertedWithCustomError(userProfile, "SelfReview");
     });
@@ -744,7 +745,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
     it("revert review too soon (cooldown)", async function () {
       await mockToken.connect(deployer).mint(user.address, ethers.parseEther("2"));
       await mockToken.connect(deployer).mint(buyer.address, ethers.parseEther("2"));
-      await userProfile.connect(user).setProfile("Alice", "", "");
+      await userProfile.connect(user).setProfile("Alice", "", "", "", "", "", "", "", "");
       await userProfile.connect(buyer).submitReview(user.address, 5, "first");
       await expect(userProfile.connect(buyer).submitReview(user.address, 5, "second"))
         .to.be.revertedWithCustomError(userProfile, "ReviewTooSoon");
@@ -760,7 +761,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     it("getReviews pagination", async function () {
       await mockToken.connect(deployer).mint(buyer.address, ethers.parseEther("2"));
-      await userProfile.connect(user).setProfile("Alice", "", "");
+      await userProfile.connect(user).setProfile("Alice", "", "", "", "", "", "", "", "");
       for (let i = 0; i < 5; i++) {
         await ethers.provider.send("evm_increaseTime", [86401]);
         await ethers.provider.send("evm_mine");

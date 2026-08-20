@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+pragma solidity ^0.8.36;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -18,6 +18,9 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         uint256 id;
         address seller;
         string metadataURI;
+        string description;
+        string tags;
+        bool isNFT;
         PricingMode pricing;
         uint256 price;
         DutchAuctionLib.Params auction;
@@ -67,30 +70,36 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         treasury = _treasury;
     }
 
-    function setTreasury(address _treasury) external onlyOwner {
-        if (_treasury == address(0)) revert ZeroAddress();
-        treasury = _treasury;
-        emit TreasuryUpdated(_treasury);
-    }
-
     function setTokenAllowed(address _token, bool _allowed) external onlyOwner {
         if (_token == address(0)) revert ZeroAddress();
         allowedTokens[_token] = _allowed;
         emit TokenAllowed(_token, _allowed);
     }
 
+    function setTreasury(address _treasury) external onlyOwner {
+        if (_treasury == address(0)) revert ZeroAddress();
+        treasury = _treasury;
+        emit TreasuryUpdated(_treasury);
+    }
+
     function listFixed(
         string calldata _metadataURI,
+        string calldata _description,
+        string calldata _tags,
+        bool _isNFT,
         uint256 _price,
         string calldata _category,
         string calldata _deliveryURI
     ) external returns (uint256) {
         if (_price == 0) revert PriceTooLow();
-        return _list(_metadataURI, PricingMode.Fixed, _price, 0, 0, 0, _category, _deliveryURI);
+        return _list(_metadataURI, _description, _tags, _isNFT, PricingMode.Fixed, _price, 0, 0, 0, _category, _deliveryURI);
     }
 
     function listDutch(
         string calldata _metadataURI,
+        string calldata _description,
+        string calldata _tags,
+        bool _isNFT,
         uint256 _startPrice,
         uint256 _reservePrice,
         uint256 _duration,
@@ -98,11 +107,14 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         string calldata _deliveryURI
     ) external returns (uint256) {
         DutchAuctionLib.validate(_startPrice, _reservePrice, _duration);
-        return _list(_metadataURI, PricingMode.DutchAuction, _startPrice, _reservePrice, _duration, block.timestamp, _category, _deliveryURI);
+        return _list(_metadataURI, _description, _tags, _isNFT, PricingMode.DutchAuction, _startPrice, _reservePrice, _duration, block.timestamp, _category, _deliveryURI);
     }
 
     function _list(
         string calldata _metadataURI,
+        string calldata _description,
+        string calldata _tags,
+        bool _isNFT,
         PricingMode _pricing,
         uint256 _price,
         uint256 _reservePrice,
@@ -117,6 +129,9 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
             id: id,
             seller: msg.sender,
             metadataURI: _metadataURI,
+            description: _description,
+            tags: _tags,
+            isNFT: _isNFT,
             pricing: _pricing,
             price: _price,
             auction: DutchAuctionLib.Params(_price, _reservePrice, _duration, _startedAt),
@@ -231,15 +246,14 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         if (l.deliveryConfirmed) revert AlreadyConfirmed();
         if (block.timestamp < l.disputeDeadline) revert WrongStatus();
 
-        bool toSeller = l.status == ListingStatus.Sold;
-        if (toSeller) {
+        if (l.status == ListingStatus.Sold) {
             l.deliveryConfirmed = true;
             _releaseToSeller(_id);
         } else {
             l.status = ListingStatus.Refunded;
             _releaseToBuyer(_id);
         }
-        emit Resolved(_id, toSeller);
+        emit Resolved(_id, l.status == ListingStatus.Sold);
     }
 
     function cancelListing(uint256 _id) external nonReentrant {
