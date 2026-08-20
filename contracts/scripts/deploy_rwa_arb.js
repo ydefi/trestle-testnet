@@ -9,7 +9,7 @@ async function main() {
   const WHITELIST_TOKEN = "0x7928BE357160d31B6ab378D0566Ce360BE0228B0";
   const GOV_SUPPLY = hre.ethers.parseEther("1000000");
   const MIN_WHITELIST = hre.ethers.parseUnits("1000", 6);
-  const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
+  const RWA_META = "ipfs://QmPlaceholder";
 
   console.log("Deploying DigitalRWA...");
   const DigitalRWA = await hre.ethers.getContractFactory("DigitalRWA");

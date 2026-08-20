@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./DutchAuctionLib.sol";
+import "./interfaces/IERC4626.sol";
 
 contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     using SafeERC20 for IERC20;
@@ -72,6 +73,12 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     mapping(uint256 => Project) public projects;
     mapping(uint256 => Gig) public gigs;
 
+    address public yieldVault;
+    bool public yieldEnabled = true;
+    address public feeDistributor;
+    mapping(uint256 => uint256) public projectShares;
+    mapping(address => bool) public allowedTokens;
+
     event ProjectCreated(uint256 indexed id, address indexed client, string title, uint256 budget);
     event ProjectFunded(uint256 indexed id, address indexed client, uint256 amount);
     event ProjectAccepted(uint256 indexed id, address indexed freelancer);
@@ -87,6 +94,13 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     event GigCancelled(uint256 indexed id);
     event GigHired(uint256 indexed gigId, uint256 indexed projectId, address indexed client);
     event TreasuryUpdated(address indexed newTreasury);
+    event YieldVaultUpdated(address indexed newVault);
+    event YieldEnabledUpdated(bool enabled);
+    event FeeDistributorUpdated(address indexed newFeeDistributor);
+    event FundsDepositedToVault(uint256 indexed id, uint256 assets);
+    event FundsWithdrawnFromVault(uint256 indexed id, uint256 principal, uint256 yieldOut);
+    event YieldDistributed(uint256 indexed id, address token, uint256 amount);
+    event TokenAllowed(address indexed token, bool allowed);
 
     error NotClient();
     error NotFreelancer();
@@ -102,6 +116,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
     error TooFewMilestones();
     error ZeroAddress();
     error TransferFailed();
+    error TokenNotAllowed();
 
     modifier onlyClient(uint256 _id) {
         if (msg.sender != projects[_id].client) revert NotClient();
@@ -124,6 +139,28 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         if (_treasury == address(0)) revert ZeroAddress();
         treasury = _treasury;
         emit TreasuryUpdated(_treasury);
+    }
+
+    function setTokenAllowed(address _token, bool _allowed) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_token == address(0)) revert ZeroAddress();
+        allowedTokens[_token] = _allowed;
+        emit TokenAllowed(_token, _allowed);
+    }
+
+    function setYieldVault(address _yieldVault) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        if (_yieldVault == address(0)) revert ZeroAddress();
+        yieldVault = _yieldVault;
+        emit YieldVaultUpdated(_yieldVault);
+    }
+
+    function setYieldEnabled(bool _enabled) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        yieldEnabled = _enabled;
+        emit YieldEnabledUpdated(_enabled);
+    }
+
+    function setFeeDistributor(address _feeDistributor) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        feeDistributor = _feeDistributor;
+        emit FeeDistributorUpdated(_feeDistributor);
     }
 
     function _send(address _token, address _to, uint256 _amount) private {
@@ -149,6 +186,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         for (uint256 i; i < len; i++) {
             if (_milestoneAmounts[i] == 0) revert InvalidMilestoneAmount();
             if (_milestoneDeadlines[i] <= block.timestamp) revert PastDeadline();
+            if (i > 0 && _milestoneDeadlines[i] <= _milestoneDeadlines[i - 1]) revert InvalidMilestoneAmount();
             totalCheck += _milestoneAmounts[i];
         }
         if (totalCheck != _totalBudget) revert BudgetTooLow();
@@ -161,11 +199,14 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         m.status = MilestoneStatus.Approved;
         uint256 amount = m.amount;
         if (p.escrowedAmount < amount) revert NoFunds();
+
+        uint256 yieldOut = _withdrawFromVault(_id, amount);
         p.escrowedAmount -= amount;
         uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
         uint256 netAmount = amount - fee;
         _send(p.paymentToken, treasury, fee);
         _send(p.paymentToken, p.freelancer, netAmount);
+        if (yieldOut > 0) _distributeYield(_id, p.paymentToken, yieldOut);
 
         emit MilestoneApproved(_id, _milestoneIndex, amount);
 
@@ -180,11 +221,61 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
             p.status = ProjectStatus.Completed;
             if (p.escrowedAmount > 0) {
                 uint256 remaining = p.escrowedAmount;
+                uint256 remYield = _withdrawFromVault(_id, remaining);
                 p.escrowedAmount = 0;
                 _send(p.paymentToken, p.freelancer, remaining);
+                if (remYield > 0) _distributeYield(_id, p.paymentToken, remYield);
             }
             emit ProjectCompleted(_id);
         }
+    }
+
+    function _vaultAsset() private view returns (address) {
+        if (yieldVault == address(0)) return address(0x1);
+        return IERC4626(yieldVault).asset();
+    }
+
+    function _depositToVault(uint256 _id) private {
+        Project storage p = projects[_id];
+        if (!yieldEnabled || yieldVault == address(0) || p.escrowedAmount == 0) return;
+        if (_vaultAsset() != p.paymentToken) return;
+        uint256 assets = p.escrowedAmount;
+        uint256 sharesBefore = IERC4626(yieldVault).balanceOf(address(this));
+        if (p.paymentToken == address(0)) {
+            IERC4626(yieldVault).deposit{value: assets}(assets, address(this));
+        } else {
+            IERC20(p.paymentToken).safeIncreaseAllowance(yieldVault, assets);
+            IERC4626(yieldVault).deposit(assets, address(this));
+        }
+        uint256 sharesAdded = IERC4626(yieldVault).balanceOf(address(this)) - sharesBefore;
+        projectShares[_id] += sharesAdded;
+        emit FundsDepositedToVault(_id, assets);
+    }
+
+    function _withdrawFromVault(uint256 _id, uint256 _principal) private returns (uint256 yieldOut) {
+        if (!yieldEnabled || yieldVault == address(0) || _principal == 0) return 0;
+        uint256 shares = projectShares[_id];
+        if (shares == 0) return 0;
+        uint256 escrowed = projects[_id].escrowedAmount;
+        if (escrowed == 0) return 0;
+        uint256 sharesOut = _principal >= escrowed ? shares : (shares * _principal) / escrowed;
+        if (sharesOut == 0) return 0;
+        uint256 assetsOut = IERC4626(yieldVault).redeem(sharesOut, address(this), address(this));
+        projectShares[_id] = shares - sharesOut;
+        if (assetsOut > _principal) {
+            yieldOut = assetsOut - _principal;
+        }
+        emit FundsWithdrawnFromVault(_id, _principal, yieldOut);
+    }
+
+    function _distributeYield(uint256 _id, address _token, uint256 _amount) private {
+        if (_amount == 0) return;
+        if (feeDistributor == address(0)) {
+            _send(_token, treasury, _amount);
+        } else {
+            _send(_token, feeDistributor, _amount);
+        }
+        emit YieldDistributed(_id, _token, _amount);
     }
 
     function createProjectFixed(
@@ -346,6 +437,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
         emit GigHired(_gigId, id, msg.sender);
         emit ProjectCreated(id, msg.sender, g.title, g.price);
         emit ProjectAccepted(id, g.freelancer);
+        _depositToVault(id);
         return id;
     }
 
@@ -374,9 +466,11 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
             if (!refund) revert TransferFailed();
         }
         emit ProjectFunded(_id, msg.sender, budget);
+        _depositToVault(_id);
     }
 
     function fundProjectWithToken(uint256 _id, address _token, uint256 _amount) external nonReentrant onlyClient(_id) {
+        if (!allowedTokens[_token]) revert TokenNotAllowed();
         Project storage p = projects[_id];
         if (p.status != ProjectStatus.Open) revert WrongStatus();
         if (p.escrowedAmount > 0) revert MixedPayment();
@@ -389,6 +483,7 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
             IERC20(_token).safeTransfer(msg.sender, _amount - budget);
         }
         emit ProjectFunded(_id, msg.sender, budget);
+        _depositToVault(_id);
     }
 
     function acceptProject(uint256 _id) external nonReentrant {
@@ -474,11 +569,16 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
 
         p.status = ProjectStatus.Completed;
         uint256 amount = p.escrowedAmount;
+        uint256 yieldOut = _withdrawFromVault(_id, amount);
         p.escrowedAmount = 0;
         address recipient = _toFreelancer ? p.freelancer : p.client;
         if (amount > 0) {
-            _send(p.paymentToken, recipient, amount);
+            uint256 fee = (amount * PLATFORM_FEE_BPS) / BPS;
+            uint256 netAmount = amount - fee;
+            if (fee > 0) _send(p.paymentToken, treasury, fee);
+            _send(p.paymentToken, recipient, netAmount);
         }
+        if (yieldOut > 0) _distributeYield(_id, p.paymentToken, yieldOut);
         emit Resolved(_id, _toFreelancer);
     }
 
@@ -497,13 +597,16 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
 
         p.status = ProjectStatus.Completed;
         uint256 amount = p.escrowedAmount;
+        uint256 yieldOut = _withdrawFromVault(_id, amount);
         p.escrowedAmount = 0;
 
         if (approvedCount * 2 > p.milestones.length) {
             _send(p.paymentToken, p.freelancer, amount);
+            if (yieldOut > 0) _distributeYield(_id, p.paymentToken, yieldOut);
             emit Resolved(_id, true);
         } else {
             _send(p.paymentToken, p.client, amount);
+            if (yieldOut > 0) _distributeYield(_id, p.paymentToken, yieldOut);
             emit Resolved(_id, false);
         }
     }
@@ -514,10 +617,12 @@ contract FreelancerEscrow is Ownable, AccessControl, ReentrancyGuard {
 
         p.status = ProjectStatus.Cancelled;
         uint256 amount = p.escrowedAmount;
+        uint256 yieldOut = _withdrawFromVault(_id, amount);
         p.escrowedAmount = 0;
         if (amount > 0) {
             _send(p.paymentToken, msg.sender, amount);
         }
+        if (yieldOut > 0) _distributeYield(_id, p.paymentToken, yieldOut);
         emit Cancelled(_id);
     }
 

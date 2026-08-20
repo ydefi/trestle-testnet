@@ -5,6 +5,8 @@ import { getPublicClient } from "wagmi/actions";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { config } from "../config/web3";
 import { useContracts } from "../hooks/useContracts";
+import ErrorBanner from "../components/ErrorBanner";
+import TxStatus, { type TxState } from "../components/TxStatus";
 
 const ERC20_ABI = [
   { inputs: [{ name: "account", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
@@ -17,6 +19,8 @@ export default function Faucet() {
   const { writeContractAsync } = useWriteContract();
   const [busy, setBusy] = useState<string | null>(null);
   const [txHash, setTxHash] = useState("");
+  const [txStatus, setTxStatus] = useState<TxState>("confirmed");
+  const [error, setError] = useState("");
 
   const TOKENS = [
     { id: "tGOV", name: "tGOV", addr: govTokenAddr, desc: "Governance token", decimals: 18, amount: "100" },
@@ -33,14 +37,15 @@ export default function Faucet() {
 
   async function mint(token: typeof TOKENS[0]) {
     if (!address || busy) return;
-    setBusy(token.id); setTxHash("");
+    setBusy(token.id); setTxHash(""); setError("");
     try {
       const hash = await writeContractAsync({ abi: ERC20_ABI, address: token.addr, functionName: "mint", args: [address, parseUnits(token.amount, token.decimals)], connector } as any);
+      setTxHash(hash); setTxStatus("pending");
       const publicClient = getPublicClient(config)!;
-      await publicClient.waitForTransactionReceipt({ hash });
-      setTxHash(hash);
+      const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
       await refetch();
-    } catch (e: any) { console.error(e); }
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Mint failed — please try again."); setTxStatus("failed"); }
     finally { setBusy(null); }
   }
 
@@ -64,10 +69,10 @@ export default function Faucet() {
         )}
 
         {txHash && (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4 text-sm text-emerald-700 break-all">
-            Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
-          </div>
+          <TxStatus hash={txHash} status={txStatus} explorer={explorer} />
         )}
+
+        <ErrorBanner message={error} onDismiss={() => setError("")} />
 
         {address && isCorrectChain && (
           <div className="space-y-3">

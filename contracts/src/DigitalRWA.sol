@@ -22,7 +22,7 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
         uint256 redemptionPrice;
     }
 
-    bytes32 public metadataURI;
+    string public metadataURI;
     uint256 public immutable cap;
     AssetInfo public assetInfo;
     bool public assetInfoSet;
@@ -36,7 +36,7 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
 
     mapping(address => bool) public manualWhitelist;
 
-    event MetadataUpdated(bytes32 indexed uri);
+    event MetadataUpdated(string uri);
     event Whitelisted(address indexed account, bool indexed status);
     event AssetInfoUpdated(AssetInfo info);
     event PriceUpdated(uint256 price, uint256 timestamp);
@@ -56,7 +56,7 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
     constructor(
         string memory _name,
         string memory _symbol,
-        bytes32 _metadataURI,
+        string memory _metadataURI,
         uint256 _cap,
         address _owner,
         address _govToken,
@@ -135,7 +135,7 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
         emit WhitelistTokenUpdated(_token, _minBalance);
     }
 
-    function setMetadataURI(bytes32 _uri) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setMetadataURI(string calldata _uri) external onlyRole(DEFAULT_ADMIN_ROLE) {
         metadataURI = _uri;
         emit MetadataUpdated(_uri);
     }

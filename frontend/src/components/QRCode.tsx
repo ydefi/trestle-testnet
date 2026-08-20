@@ -1,3 +1,5 @@
+import { QRCodeSVG } from "qrcode.react";
+
 const SITE_URL = "https://testnet.trestle.website";
 
 export default function QRCode({
@@ -9,11 +11,12 @@ export default function QRCode({
 }) {
   return (
     <div className="bg-white p-2 rounded-lg shadow border border-gray-200 inline-block">
-      <img
-        src={`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(value)}&color=059669&bgcolor=ffffff&ecc=M`}
-        alt="QR Code"
-        width={size}
-        height={size}
+      <QRCodeSVG
+        value={value}
+        size={size}
+        bgColor="#ffffff"
+        fgColor="#059669"
+        level="M"
         className="rounded"
       />
       <p className="text-center text-[9px] text-gray-400 mt-1 font-medium">

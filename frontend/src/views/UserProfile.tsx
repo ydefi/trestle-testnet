@@ -3,8 +3,12 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useReadContracts } from "wagmi";
+import { getPublicClient } from "wagmi/actions";
 import { type Address } from "viem";
+import { config } from "@/config/web3";
 import { useContracts } from "@/hooks/useContracts";
+import ErrorBanner from "@/components/ErrorBanner";
+import TxStatus, { type TxState } from "@/components/TxStatus";
 
 export default function UserProfilePage() {
   const { address } = useAccount();
@@ -25,6 +29,8 @@ export default function UserProfilePage() {
   const [comment, setComment] = useState("");
 
   const [txHash, setTxHash] = useState("");
+  const [txStatus, setTxStatus] = useState<TxState>("confirmed");
+  const [error, setError] = useState("");
 
   // Read my profile
   const { data: myProfile } = useReadContracts({
@@ -51,10 +57,13 @@ export default function UserProfilePage() {
 
   const handleSetProfile = async () => {
     if (!name.trim()) return;
+    setError("");
     try {
       const hash = await setProfile(name.trim(), avatarURI.trim(), bio.trim());
-      setTxHash(hash);
-    } catch (e) { console.error(e); }
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to save profile."); setTxStatus("failed"); }
   };
 
   const handleLookup = () => {
@@ -64,11 +73,14 @@ export default function UserProfilePage() {
 
   const handleReview = async () => {
     if (!reviewAddr.trim()) return;
+    setError("");
     try {
       const hash = await submitReview(reviewAddr.trim() as Address, rating, comment.trim());
-      setTxHash(hash);
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
       setReviewAddr(""); setRating(5); setComment("");
-    } catch (e) { console.error(e); }
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to submit review."); setTxStatus("failed"); }
   };
 
   const lookupProfileData = lookupProfile?.[0]?.result as { name: string; avatarURI: string; bio: string } | undefined;
@@ -147,7 +159,9 @@ export default function UserProfilePage() {
         </button>
       </section>
 
-      {txHash && <p className="text-xs text-gray-500 break-all">Tx: {txHash}</p>}
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
+
+      {txHash && <TxStatus hash={txHash} status={txStatus} />}
     </div>
   );
 }

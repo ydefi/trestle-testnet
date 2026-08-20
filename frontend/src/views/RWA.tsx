@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { useAccount, useReadContract, useWriteContract } from "wagmi";
+import { getPublicClient } from "wagmi/actions";
 import { formatUnits, parseUnits, type Address } from "viem";
+import { config } from "../config/web3";
 import { useContracts } from "../hooks/useContracts";
+import ErrorBanner from "../components/ErrorBanner";
+import TxStatus, { type TxState } from "../components/TxStatus";
 
 const EXAMPLE_INFO = {
   name: "Trestle Treasury Bill Fund",
@@ -29,7 +33,7 @@ function parseAssetInfo(raw: unknown): typeof EXAMPLE_INFO | undefined {
 }
 
 export default function RWA() {
-  const { address, isConnected, rwaReady, rwaAddr, rwaABI, explorer, setWhitelistToken } = useContracts();
+  const { address, isConnected, rwaReady, rwaAddr, rwaABI, explorer, setWhitelistToken, chainCurrency } = useContracts();
   const { connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
 
@@ -40,6 +44,8 @@ export default function RWA() {
   const [wlMinBal, setWlMinBal] = useState("100");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState("");
+  const [txStatus, setTxStatus] = useState<TxState>("confirmed");
+  const [error, setError] = useState("");
 
   const { data: whitelisted } = useReadContract({
     abi: rwaABI, address: rwaAddr, functionName: "isWhitelisted",
@@ -83,51 +89,61 @@ export default function RWA() {
 
   async function handleSubscribe() {
     if (!rwaReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const hash = await writeContractAsync({ abi: rwaABI, address: rwaAddr, functionName: "subscribe", args: [], value: parseUnits(subAmount || "0", 18), connector } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); }
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Subscribe failed."); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
   async function handleMint() {
     if (!address || !rwaReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const hash = await writeContractAsync({ abi: rwaABI, address: rwaAddr, functionName: "mint", args: [address, parseUnits(mintAmount || "0", 18)], connector } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); }
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Mint failed."); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
   async function handleSetWhitelist(status: boolean) {
     if (!rwaReady || busy || !wlAddr) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
-      const hash = await writeContractAsync({ abi: rwaABI, address: rwaAddr, functionName: "setWhitelist", args: [wlAddr as Address, status], connector } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); }
+      const hash = await writeContractAsync({ abi: rwaABI, address: rwaAddr, functionName: "setManualWhitelist", args: [wlAddr as Address, status], connector } as any);
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Whitelist update failed."); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
   async function handleSetWhitelistToken() {
     if (!rwaReady || busy || !wlToken) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const hash = await setWhitelistToken(wlToken as Address, wlMinBal || "0");
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); }
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Token whitelist update failed."); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
   async function handleSyncPrice() {
     if (!rwaReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const hash = await writeContractAsync({ abi: rwaABI, address: rwaAddr, functionName: "syncPrice", args: [], connector } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); }
+      setTxHash(hash); setTxStatus("pending");
+      const receipt = await getPublicClient(config)!.waitForTransactionReceipt({ hash });
+      setTxStatus(receipt.status === "success" ? "confirmed" : "failed");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Price sync failed."); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
@@ -170,10 +186,10 @@ export default function RWA() {
       )}
 
       {txHash && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 break-all">
-          Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
-        </div>
+        <TxStatus hash={txHash} status={txStatus} explorer={explorer} />
       )}
+
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       {/* Asset Info */}
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -190,7 +206,7 @@ export default function RWA() {
             <div className="flex justify-between"><span className="text-gray-500">Redemption Date</span><span className="font-medium">{new Date(Number(info.redemptionDate) * 1000).toLocaleDateString()}</span></div>
           )}
           {Number(info.redemptionPrice) > 0 && (
-            <div className="flex justify-between"><span className="text-gray-500">Redemption Price</span><span className="font-medium">{formatUnits(info.redemptionPrice, 18)} MATIC</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Redemption Price</span><span className="font-medium">{formatUnits(info.redemptionPrice, 18)} {chainCurrency}</span></div>
           )}
         </div>
       </div>
@@ -226,7 +242,7 @@ export default function RWA() {
           <h3 className="font-semibold text-gray-900">Subscribe</h3>
           <p className="text-xs text-gray-500">Send POL to mint RWA tokens (1 POL = 1 DA1)</p>
           <div className="flex gap-2">
-            <input value={subAmount} onChange={e => setSubAmount(e.target.value)} type="number" min="0" placeholder="MATIC amount" className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
+            <input value={subAmount} onChange={e => setSubAmount(e.target.value)} type="number" min="0" placeholder={`${chainCurrency} amount`} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm" />
             <button onClick={handleSubscribe} disabled={busy || !rwaReady} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-300 text-white text-sm font-medium rounded-lg transition">
               {busy ? "..." : "Buy DA1"}
             </button>

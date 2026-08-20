@@ -31,7 +31,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
 
     const DigitalRWA = await ethers.getContractFactory("DigitalRWA");
     digitalRWA = await DigitalRWA.deploy(
-      "RealAsset", "RA", ethers.encodeBytes32String("ipfs://meta"),
+      "RealAsset", "RA", "ipfs://meta",
       ethers.parseEther("1000000"), deployer.address,
       await govToken.getAddress(), ethers.parseEther("100"),
       await mockPriceFeed.getAddress()
@@ -394,7 +394,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       await digitalGoods.connect(buyer).dispute(1);
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
       await ethers.provider.send("evm_mine");
-      await digitalGoods.connect(user).resolveAfterTimeout(1);
+      await digitalGoods.connect(buyer).resolveAfterTimeout(1);
       expect((await digitalGoods.listings(1)).status).to.equal(4); // Refunded
     });
 
@@ -403,7 +403,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       await digitalGoods.connect(buyer).buy(1, { value: ethers.parseEther("5") });
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
       await ethers.provider.send("evm_mine");
-      await digitalGoods.connect(user).resolveAfterTimeout(1);
+      await digitalGoods.connect(buyer).resolveAfterTimeout(1);
       expect((await digitalGoods.listings(1)).status).to.equal(1); // Sold (released to seller)
     });
 
@@ -466,7 +466,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
   describe("FreelancerEscrow", function () {
     const descs = ["Design", "Dev"];
     const amts = [ethers.parseEther("3"), ethers.parseEther("7")];
-    const deadlines = [FUTURE(), FUTURE()];
+    const deadlines = [FUTURE(), FUTURE() + 86400];
     const budget = ethers.parseEther("10");
 
     it("create fixed project", async function () {
@@ -547,7 +547,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       await freelancerEscrow.connect(freelancer).submitMilestone(1, 0, "ipfs://work");
       await ethers.provider.send("evm_increaseTime", [15 * 86400]);
       await ethers.provider.send("evm_mine");
-      await freelancerEscrow.connect(user).autoApproveMilestone(1, 0);
+      await freelancerEscrow.connect(freelancer).autoApproveMilestone(1, 0);
       const ms = await freelancerEscrow.getMilestoneCount(1);
       expect(ms).to.equal(2);
     });
@@ -579,7 +579,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       await freelancerEscrow.connect(client).disputeProject(1);
       await ethers.provider.send("evm_increaseTime", [8 * 86400]);
       await ethers.provider.send("evm_mine");
-      await freelancerEscrow.connect(user).autoResolveDispute(1);
+      await freelancerEscrow.connect(freelancer).autoResolveDispute(1);
       expect((await freelancerEscrow.projects(1)).status).to.equal(2);
     });
 
@@ -621,7 +621,7 @@ describe("Trestle Protocol — Heavy Test Suite", function () {
       const price = ethers.parseEther("10");
       const gDescs = ["Design", "Dev", "Ship"];
       const gAmts = [ethers.parseEther("2"), ethers.parseEther("5"), ethers.parseEther("3")];
-      const gDeadlines = [FUTURE(), FUTURE(), FUTURE()];
+      const gDeadlines = [FUTURE(), FUTURE() + 86400, FUTURE() + 2 * 86400];
 
       await freelancerEscrow.connect(freelancer).createGig("Full Stack", "ipfs://portfolio", price, gDescs, gAmts, gDeadlines);
       const gig = await freelancerEscrow.gigs(1);

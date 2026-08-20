@@ -1,30 +1,29 @@
-const AI_API = process.env.NEXT_PUBLIC_AI_API_URL || "https://ai.trestle.website";
-const REWARD_API = process.env.NEXT_PUBLIC_REWARD_API_URL || "https://reward-api.trestle.website";
+const AI_API = process.env.NEXT_PUBLIC_AI_API_URL ?? "https://ai.trestle.website";
+const REWARD_API = process.env.NEXT_PUBLIC_REWARD_API_URL ?? "https://reward-api.trestle.website";
 
 type AstraContext = Record<string, string>;
 
-export interface AgentResponse {
-  content: string;
-  source: string;
-  agent: string;
-}
+const SYSTEM_PROMPT = `You are Astra, the Trestle DeFi AI assistant. Trestle is a decentralized finance platform with:
+- A digital goods marketplace for buying/selling digital items
+- Real World Asset (RWA) tokenization and management
+- Staking pools (tier1 staking, tier2 staking)
+- Reward hub with tasks, identity verification, and claim system
+- Community governance
+Trestle is NOT a cryptocurrency exchange or DEX for trading tokens. Keep answers concise and accurate.`;
 
 async function tryDirectAPI(message: string, context?: AstraContext): Promise<string | null> {
   try {
-    const ctx = context
-      ? Object.entries(context).filter(([_, v]) => v).map(([k, v]) => `${k}: ${v}`).join("\n")
-      : "";
-    const prompt = ctx ? `Context:\n${ctx}\n\nUser: ${message}` : message;
-    const system = "You are Astra, the Trestle DeFi AI assistant. You help users with staking, rewards, marketplace, disputes, and platform questions. Be concise and helpful.";
-
+    const system = context?.address
+      ? `${SYSTEM_PROMPT}\nThe user's wallet is ${context.address}.`
+      : SYSTEM_PROMPT;
     const r = await fetch(`${AI_API}/api/ai/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ system, user: prompt }),
+      body: JSON.stringify({ system, user: message }),
     });
     if (!r.ok) return null;
     const data = await r.json();
-    return data.content || data.response || null;
+    return typeof data.content === "string" ? data.content : JSON.stringify(data.content);
   } catch {
     return null;
   }

@@ -40,6 +40,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     address public treasury;
     mapping(uint256 => Listing) public listings;
     mapping(uint256 => string) public deliveryHashes;
+    mapping(address => bool) public allowedTokens;
 
     event Listed(uint256 indexed id, address indexed seller, PricingMode pricing, uint256 price, string metadataURI, string category);
     event Purchased(uint256 indexed id, address indexed buyer, uint256 paid);
@@ -49,6 +50,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     event Resolved(uint256 indexed id, bool toBuyer);
     event Cancelled(uint256 indexed id);
     event TreasuryUpdated(address indexed newTreasury);
+    event TokenAllowed(address indexed token, bool allowed);
 
     error NotSeller();
     error NotBuyer();
@@ -58,6 +60,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     error NoRefundNeeded();
     error ZeroAddress();
     error TransferFailed();
+    error TokenNotAllowed();
 
     constructor(address _treasury) Ownable(msg.sender) {
         if (_treasury == address(0)) revert ZeroAddress();
@@ -68,6 +71,12 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         if (_treasury == address(0)) revert ZeroAddress();
         treasury = _treasury;
         emit TreasuryUpdated(_treasury);
+    }
+
+    function setTokenAllowed(address _token, bool _allowed) external onlyOwner {
+        if (_token == address(0)) revert ZeroAddress();
+        allowedTokens[_token] = _allowed;
+        emit TokenAllowed(_token, _allowed);
     }
 
     function listFixed(
@@ -161,6 +170,7 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
     }
 
     function buyWithToken(uint256 _id, address _token, uint256 _amount) external nonReentrant {
+        if (!allowedTokens[_token]) revert TokenNotAllowed();
         Listing storage l = listings[_id];
         if (l.status != ListingStatus.Active) revert WrongStatus();
         if (msg.sender == l.seller) revert WrongStatus();
@@ -221,14 +231,15 @@ contract DigitalGoods is Ownable, ReentrancyGuard {
         if (l.deliveryConfirmed) revert AlreadyConfirmed();
         if (block.timestamp < l.disputeDeadline) revert WrongStatus();
 
-        if (l.status == ListingStatus.Sold) {
+        bool toSeller = l.status == ListingStatus.Sold;
+        if (toSeller) {
             l.deliveryConfirmed = true;
             _releaseToSeller(_id);
         } else {
             l.status = ListingStatus.Refunded;
             _releaseToBuyer(_id);
         }
-        emit Resolved(_id, l.status == ListingStatus.Sold);
+        emit Resolved(_id, toSeller);
     }
 
     function cancelListing(uint256 _id) external nonReentrant {

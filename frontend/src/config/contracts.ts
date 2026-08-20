@@ -4,9 +4,8 @@ export const CHAIN_CONFIG = {
     name: "Polygon Amoy",
     shortName: "Amoy",
     rpc: "https://rpc-amoy.polygon.technology/",
-    explorer: "https://www.oklink.com/amoy",
+    explorer: "https://amoy.polygonscan.com",
     currency: { name: "POL", symbol: "POL", decimals: 18 },
-    blockscout: "https://amoy.blockscout.com",
   },
   baseSepolia: {
     id: 84532,

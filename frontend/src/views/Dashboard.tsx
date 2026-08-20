@@ -6,7 +6,7 @@ import { formatUnits } from "viem";
 import { getBalance } from "wagmi/actions";
 import { config } from "../config/web3";
 import { CHAIN_CONFIG } from "../config/contracts";
-import { getTransactions, getAddressInfo, explorerTxUrl, type BlockscoutTx, type BlockscoutAddress } from "../lib/blockscout";
+import { getTransactions, getAddressInfo, getBlockscoutUrl, explorerTxUrl, type BlockscoutTx, type BlockscoutAddress } from "../lib/blockscout";
 
 interface ChainBalance {
   chainId: number;
@@ -17,20 +17,25 @@ interface ChainBalance {
 }
 
 export default function Dashboard() {
-  const { address, balance, chainId, chainName } = useContracts();
+  const { address, balance, chainId, chainName, chainCurrency } = useContracts();
   const [txs, setTxs] = useState<BlockscoutTx[] | null>(null);
   const [addrInfo, setAddrInfo] = useState<BlockscoutAddress | null>(null);
   const [bsLoading, setBsLoading] = useState(false);
   const [chainBalances, setChainBalances] = useState<ChainBalance[]>([]);
 
+  const [hasBlockscout, setHasBlockscout] = useState(false);
+
   useEffect(() => {
-    if (!address) { setTxs(null); setAddrInfo(null); setChainBalances([]); return; }
+    if (!address) { setTxs(null); setAddrInfo(null); setChainBalances([]); setHasBlockscout(false); return; }
+    const bsUrl = getBlockscoutUrl(chainId);
+    if (!bsUrl) { setTxs(null); setAddrInfo(null); setBsLoading(false); setHasBlockscout(false); return; }
+    setHasBlockscout(true);
     setBsLoading(true);
     Promise.all([getTransactions(address, 0, chainId), getAddressInfo(address, chainId)]).then(([txData, addrData]) => {
       setTxs(txData);
       setAddrInfo(addrData);
       setBsLoading(false);
-    });
+    }).catch(() => { setBsLoading(false); });
 
     const chains = Object.values(CHAIN_CONFIG);
     setChainBalances(chains.map(c => ({ chainId: c.id, name: c.shortName, symbol: c.currency.symbol, balance: null, loading: true })));
@@ -43,7 +48,7 @@ export default function Dashboard() {
     ).then(setChainBalances);
   }, [address, chainId]);
 
-  const otherTokens = addrInfo?.token_balances?.filter(t => t.token.symbol !== "MATIC") ?? [];
+  const otherTokens = addrInfo?.token_balances?.filter(t => t.token.symbol !== chainCurrency) ?? [];
 
   function ago(ts: string) {
     const sec = (Date.now() - new Date(ts).getTime()) / 1000;
@@ -106,7 +111,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : balance ? (
-            <p className="text-3xl font-bold text-gray-900 text-center">{parseFloat(balance).toFixed(4)} MATIC</p>
+            <p className="text-3xl font-bold text-gray-900 text-center">{parseFloat(balance).toFixed(4)} {chainCurrency}</p>
           ) : (
             <LoadingSpinner label="Fetching balance..." />
           )}
@@ -119,7 +124,7 @@ export default function Dashboard() {
       </div>
 
       {/* Token Balances from Blockscout */}
-      {otherTokens.length > 0 && (
+      {hasBlockscout && otherTokens.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-3">Token Balances</h3>
           <div className="space-y-2">
@@ -136,14 +141,14 @@ export default function Dashboard() {
       )}
 
       {/* Recent Transactions from Blockscout */}
-      {address && (
+      {hasBlockscout && address && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-gray-700">Recent Transactions</h3>
             {bsLoading && <span className="text-xs text-gray-400">Loading...</span>}
           </div>
           {txs === null && !bsLoading ? (
-            <p className="text-xs text-gray-400 italic">Could not fetch transactions from Blockscout.</p>
+            <p className="text-xs text-gray-400 italic">Could not fetch transactions from Blockscout. (Chain may not be indexed yet)</p>
           ) : txs && txs.length > 0 ? (
             <div className="space-y-2">
               {txs.map((tx, i) => {

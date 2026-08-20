@@ -5,10 +5,16 @@ import { createAppKit } from "@reown/appkit/react";
 
 export const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID ?? "";
 
+if (!process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID) {
+  console.error(
+    "WalletConnect Project ID is missing. Wallet connection will fail. " +
+      "Set NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID in .env.local (create one at https://cloud.reown.com)."
+  );
+}
+
 const AMOY_RPC = [
   "https://polygon-amoy.drpc.org",
   "https://rpc-amoy.polygon.technology/",
-  "https://amoy.blockscout.com/rpc",
 ];
 
 const BASE_SEPOLIA_RPC = [

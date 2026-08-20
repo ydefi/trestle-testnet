@@ -13,13 +13,13 @@ const DIGITAL_GOODS_ABI = [
   { inputs: [{ name: "listingId", type: "uint256" }, { name: "token", type: "address" }, { name: "amount", type: "uint256" }], name: "buyWithToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "listingId", type: "uint256" }], name: "currentPrice", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "listingCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "", type: "uint256" }], name: "listings", outputs: [{ name: "id", type: "uint256" }, { name: "seller", type: "address" }, { name: "metadataURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "price", type: "uint256" }, { name: "auction", type: "tuple", components: [{ name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "startedAt", type: "uint256" }] }, { name: "status", type: "uint8" }, { name: "buyer", type: "address" }, { name: "escrowedAmount", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "deliveryConfirmed", type: "bool" }, { name: "paymentToken", type: "address" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "metadataURI", type: "string" }, { name: "price", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listFixed", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "metadataURI", type: "string" }, { name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "category", type: "string" }, { name: "deliveryURI", type: "string" }], name: "listDutch", outputs: [{ name: "", type: "uint256" }], stateMutability: "nonpayable", type: "function" },
 ] as const;
 
 const FREELANCER_ESCROW_ABI = [
-  { inputs: [{ name: "projectId", type: "uint256" }], name: "projects", outputs: [{ name: "client", type: "address" }, { name: "freelancer", type: "address" }, { name: "status", type: "uint8" }, { name: "totalBudget", type: "uint256" }, { name: "escrowedAmount", type: "uint256" }, { name: "paymentToken", type: "address" }, { name: "title", type: "string" }, { name: "descriptionURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "disputeDeadline", type: "uint256" }, { name: "createdAt", type: "uint256" }], stateMutability: "view", type: "function" },
+  { inputs: [{ name: "", type: "uint256" }], name: "projects", outputs: [{ name: "id", type: "uint256" }, { name: "client", type: "address" }, { name: "freelancer", type: "address" }, { name: "title", type: "string" }, { name: "descriptionURI", type: "string" }, { name: "pricing", type: "uint8" }, { name: "totalBudget", type: "uint256" }, { name: "auction", type: "tuple", components: [{ name: "startPrice", type: "uint256" }, { name: "reservePrice", type: "uint256" }, { name: "duration", type: "uint256" }, { name: "startedAt", type: "uint256" }] }, { name: "status", type: "uint8" }, { name: "escrowedAmount", type: "uint256" }, { name: "disputeDeadline", type: "uint256" }, { name: "createdAt", type: "uint256" }, { name: "paymentToken", type: "address" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "projectCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "", type: "uint256" }], name: "gigs", outputs: [{ name: "id", type: "uint256" }, { name: "freelancer", type: "address" }, { name: "title", type: "string" }, { name: "descriptionURI", type: "string" }, { name: "price", type: "uint256" }, { name: "active", type: "bool" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "gigCount", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
@@ -34,11 +34,10 @@ const FREELANCER_ESCROW_ABI = [
 
 const RWA_ABI = [
   { inputs: [{ name: "account", type: "address" }], name: "isWhitelisted", outputs: [{ name: "", type: "bool" }], stateMutability: "view", type: "function" },
-  { inputs: [{ name: "account", type: "address" }], name: "whitelisted", outputs: [{ name: "", type: "bool" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "account", type: "address" }], name: "balanceOf", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "totalSupply", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [{ name: "to", type: "address" }, { name: "amount", type: "uint256" }], name: "mint", outputs: [], stateMutability: "nonpayable", type: "function" },
-  { inputs: [{ name: "account", type: "address" }, { name: "status", type: "bool" }], name: "setWhitelist", outputs: [], stateMutability: "nonpayable", type: "function" },
+  { inputs: [{ name: "account", type: "address" }, { name: "status", type: "bool" }], name: "setManualWhitelist", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [{ name: "token", type: "address" }, { name: "minBalance", type: "uint256" }], name: "setWhitelistToken", outputs: [], stateMutability: "nonpayable", type: "function" },
   { inputs: [], name: "assetInfo", outputs: [{ name: "name", type: "string" }, { name: "description", type: "string" }, { name: "lockupDuration", type: "uint256" }, { name: "expectedReturnBps", type: "uint256" }, { name: "underlyingAsset", type: "string" }, { name: "redemptionDate", type: "uint256" }, { name: "redemptionPrice", type: "uint256" }], stateMutability: "view", type: "function" },
   { inputs: [], name: "cap", outputs: [{ name: "", type: "uint256" }], stateMutability: "view", type: "function" },
@@ -74,7 +73,7 @@ export function useContracts() {
   const isCorrectChain = chainKey !== null;
   const chainName = chainKey ? CHAIN_CONFIG[chainKey].name : "Unsupported";
   const chainCurrency = chainKey ? CHAIN_CONFIG[chainKey].currency.symbol : "ETH";
-  const explorer = chainKey ? CHAIN_CONFIG[chainKey].blockscout : "";
+  const explorer = chainKey ? CHAIN_CONFIG[chainKey].explorer : "";
 
   const addrs = chainKey ? CONTRACT_ADDRESSES[CHAIN_CONFIG[chainKey].id] : null;
 
@@ -91,7 +90,7 @@ export function useContracts() {
 
   const { writeContractAsync } = useWriteContract();
   const write = (payload: Parameters<typeof writeContractAsync>[0]) =>
-    writeContractAsync({ ...payload, connector } as any);
+    writeContractAsync({ ...payload, chainId, connector } as any);
 
   return {
     address,
@@ -140,8 +139,8 @@ export function useContracts() {
     rwaABI: RWA_ABI,
     mintRWA: (to: Address, amount: string) =>
       write({ abi: RWA_ABI, address: digitalRWA, functionName: "mint", args: [to, parseUnits(amount, 18)] } as any),
-    setWhitelist: (account: Address, status: boolean) =>
-      write({ abi: RWA_ABI, address: digitalRWA, functionName: "setWhitelist", args: [account, status] } as any),
+    setManualWhitelist: (account: Address, status: boolean) =>
+      write({ abi: RWA_ABI, address: digitalRWA, functionName: "setManualWhitelist", args: [account, status] } as any),
     setWhitelistToken: (token: Address, minBalance: string) =>
       write({ abi: RWA_ABI, address: digitalRWA, functionName: "setWhitelistToken", args: [token, parseUnits(minBalance, 18)] } as any),
 

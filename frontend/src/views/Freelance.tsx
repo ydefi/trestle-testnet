@@ -3,18 +3,23 @@ import { useAccount } from "wagmi";
 import { useReadContracts, useWriteContract } from "wagmi";
 import { formatUnits, parseUnits, type Address } from "viem";
 import { useContracts } from "../hooks/useContracts";
+import ErrorBanner from "../components/ErrorBanner";
+import TxStatus, { type TxState } from "../components/TxStatus";
 
 type Tab = "browse" | "create-gig" | "create-project";
 
 export default function Freelance() {
-  const { address, isConnected, freelancerEscrowReady, freelancerEscrowAddr, freelancerEscrowABI, explorer } = useContracts();
+  const { address, isConnected, freelancerEscrowReady, freelancerEscrowAddr, freelancerEscrowABI, explorer, chainCurrency } = useContracts();
   const { connector } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const { chainId } = useAccount();
   const addr = freelancerEscrowAddr as Address;
 
   const [tab, setTab] = useState<Tab>("browse");
   const [busy, setBusy] = useState(false);
   const [txHash, setTxHash] = useState("");
+  const [txStatus, setTxStatus] = useState<TxState>("confirmed");
+  const [error, setError] = useState("");
 
   // ── Create Gig form ──
   const [gigTitle, setGigTitle] = useState("Web Dev");
@@ -40,39 +45,39 @@ export default function Freelance() {
     return {
       descs: d.slice(0, n),
       amounts: a.slice(0, n),
-      deadlines: du.map(s => BigInt(parseInt(s) * 86400)),
+      deadlines: du.slice(0, n).map(s => BigInt(Math.floor(Date.now() / 1000) + parseInt(s) * 86400)),
     };
   }
 
   async function handleCreateGig() {
     if (!freelancerEscrowReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const { descs, amounts, deadlines } = parseMilestones(gigMsDesc, gigMsAmt, gigMsDur);
       const hash = await writeContractAsync({
         abi: freelancerEscrowABI, address: addr,
         functionName: "createGig",
         args: [gigTitle, gigDesc, parseUnits(gigPrice, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
-        connector,
+        chainId, connector,
       } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); alert(e?.message || "Failed to create gig"); }
+      setTxHash(hash); setTxStatus("pending");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to create gig"); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
   async function handleCreateProject() {
     if (!freelancerEscrowReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const { descs, amounts, deadlines } = parseMilestones(projMsDesc, projMsAmt, projMsDur);
       const hash = await writeContractAsync({
         abi: freelancerEscrowABI, address: addr,
         functionName: "createProjectFixed",
         args: [projTitle, projDesc, parseUnits(projBudget, 18), descs, amounts.map(a => parseUnits(a, 18)), deadlines],
-        connector,
+        chainId, connector,
       } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); alert(e?.message || "Failed to create project"); }
+      setTxHash(hash); setTxStatus("pending");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to create project"); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
@@ -113,20 +118,20 @@ export default function Freelance() {
     return projIds.map((id, i) => {
       const r = projsRaw[i]?.result as any;
       if (!r) return null;
-      return { id: BigInt(id), client: r[0] as Address, freelancer: r[1] as Address, status: Number(r[2]), totalBudget: r[3] as bigint, escrowed: r[4] as bigint, title: r[6] as string, desc: r[7] as string };
+      return { id: BigInt(id), client: r.client as Address, freelancer: r.freelancer as Address, status: Number(r.status), totalBudget: r.totalBudget as bigint, escrowed: r.escrowedAmount as bigint, title: r.title as string, desc: r.descriptionURI as string };
     }).filter((p): p is NonNullable<typeof p> => p != null);
   }, [projsRaw, projIds]);
 
   async function handleHire(gigId: bigint, price: bigint) {
     if (!freelancerEscrowReady || busy) return;
-    setBusy(true); setTxHash("");
+    setBusy(true); setTxHash(""); setError("");
     try {
       const hash = await writeContractAsync({
         abi: ABI, address: addr, functionName: "hireGig",
-        args: [gigId], value: price, connector,
+        args: [gigId], value: price, chainId, connector,
       } as any);
-      setTxHash(hash);
-    } catch (e: any) { console.error(e); alert(e?.message || "Failed to hire"); }
+      setTxHash(hash); setTxStatus("pending");
+    } catch (e: any) { console.error(e); setError(e?.shortMessage || e?.message || "Failed to hire"); setTxStatus("failed"); }
     finally { setBusy(false); }
   }
 
@@ -157,10 +162,10 @@ export default function Freelance() {
       </div>
 
       {txHash && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-sm text-emerald-700 break-all">
-          Tx: <a href={`${explorer}/tx/${txHash}`} target="_blank" rel="noopener noreferrer" className="underline font-mono">{txHash.slice(0, 20)}...</a>
-        </div>
+        <TxStatus hash={txHash} status={txStatus} explorer={explorer} />
       )}
+
+      <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       {tab === "browse" && (
         <div className="grid md:grid-cols-2 gap-6">
@@ -175,7 +180,7 @@ export default function Freelance() {
                   <div key={g.id.toString()} className="border border-gray-100 rounded-lg p-3 text-sm">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-gray-900">{g.title}</span>
-                      <span className="text-emerald-600 font-semibold">{formatUnits(g.price, 18)} MATIC</span>
+                      <span className="text-emerald-600 font-semibold">{formatUnits(g.price, 18)} {chainCurrency}</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-2">By {g.freelancer.slice(0, 6)}...{g.freelancer.slice(-4)}</p>
                     <button onClick={() => handleHire(g.id, g.price)} disabled={busy || isOwner(g.freelancer)}
@@ -199,10 +204,10 @@ export default function Freelance() {
                   <div key={p.id.toString()} className="border border-gray-100 rounded-lg p-3 text-sm">
                     <div className="flex justify-between items-start mb-1">
                       <span className="font-medium text-gray-900">{p.title}</span>
-                      <span className="text-blue-600 font-semibold">{formatUnits(p.totalBudget, 18)} MATIC</span>
+                      <span className="text-blue-600 font-semibold">{formatUnits(p.totalBudget, 18)} {chainCurrency}</span>
                     </div>
                     <p className="text-xs text-gray-400 mb-2">Client: {p.client.slice(0, 6)}...{p.client.slice(-4)}</p>
-                    <p className="text-xs text-gray-400">Status: {STATUS[p.status] || "Unknown"} · Escrowed: {formatUnits(p.escrowed, 18)} MATIC</p>
+                    <p className="text-xs text-gray-400">Status: {STATUS[p.status] || "Unknown"} · Escrowed: {formatUnits(p.escrowed, 18)} {chainCurrency}</p>
                   </div>
                 ))}
               </div>
@@ -217,7 +222,7 @@ export default function Freelance() {
           <p className="text-xs text-gray-500">List your service with milestone-based payments.</p>
           {[{ label: "Title", val: gigTitle, set: setGigTitle },
             { label: "Description URI (ipfs://...)", val: gigDesc, set: setGigDesc },
-            { label: "Price (MATIC)", val: gigPrice, set: setGigPrice, type: "number" },
+            { label: `Price (${chainCurrency})`, val: gigPrice, set: setGigPrice, type: "number" },
             { label: "Milestone Descriptions (comma-sep)", val: gigMsDesc, set: setGigMsDesc },
             { label: "Milestone Amounts (comma-sep)", val: gigMsAmt, set: setGigMsAmt },
             { label: "Milestone Deadlines (days, comma-sep)", val: gigMsDur, set: setGigMsDur },
@@ -241,7 +246,7 @@ export default function Freelance() {
           <p className="text-xs text-gray-500">Post a fixed-budget project with milestones for freelancers to apply.</p>
           {[{ label: "Title", val: projTitle, set: setProjTitle },
             { label: "Description URI (ipfs://...)", val: projDesc, set: setProjDesc },
-            { label: "Total Budget (MATIC)", val: projBudget, set: setProjBudget, type: "number" },
+            { label: `Total Budget (${chainCurrency})`, val: projBudget, set: setProjBudget, type: "number" },
             { label: "Milestone Descriptions (comma-sep)", val: projMsDesc, set: setProjMsDesc },
             { label: "Milestone Amounts (comma-sep)", val: projMsAmt, set: setProjMsAmt },
             { label: "Milestone Deadlines (days, comma-sep)", val: projMsDur, set: setProjMsDur },

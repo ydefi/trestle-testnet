@@ -39,7 +39,7 @@ describe("Testnet Contracts", function () {
     const DigitalRWA = await ethers.getContractFactory("DigitalRWA");
     digitalRWA = await DigitalRWA.deploy(
       "RealAsset 1", "RA1",
-      ethers.encodeBytes32String("ipfs://QmMeta"),
+      "ipfs://QmMeta",
       ethers.parseEther("1000000"),
       deployer.address,
       await govToken.getAddress(),
@@ -263,6 +263,7 @@ describe("Testnet Contracts", function () {
     it("should allow buy with ERC20 token", async function () {
       const price = ethers.parseEther("100");
       await digitalGoods.connect(seller).listFixed("ipfs://token-item", price, "", "");
+      await digitalGoods.connect(deployer).setTokenAllowed(await mockToken.getAddress(), true);
       await mockToken.connect(deployer).mint(buyer.address, price);
       await mockToken.connect(buyer).approve(await digitalGoods.getAddress(), price);
 
@@ -290,7 +291,7 @@ describe("Testnet Contracts", function () {
     const milestoneDescs = ["Design", "Development", "Testing"];
     const milestoneAmounts = [ethers.parseEther("2"), ethers.parseEther("5"), ethers.parseEther("3")];
     const futureDeadline = Math.floor(Date.now() / 1000) + 365 * 86400;
-    const milestoneDeadlines = [futureDeadline, futureDeadline, futureDeadline];
+    const milestoneDeadlines = [futureDeadline, futureDeadline + 86400, futureDeadline + 2 * 86400];
     const totalBudget = ethers.parseEther("10");
 
     it("should create a fixed-budget project", async function () {
@@ -386,7 +387,7 @@ describe("Testnet Contracts", function () {
       const duration = 86400;
       const amts = [ethers.parseEther("10"), ethers.parseEther("10")];
       const descs = ["Phase 1", "Phase 2"];
-      const deadlines = [futureDeadline, futureDeadline];
+      const deadlines = [futureDeadline, futureDeadline + 86400];
 
       await freelancerEscrow.connect(client).createProjectDutch(
         "Dutch Freelance Job", "ipfs://dutch-brief",
@@ -486,7 +487,7 @@ describe("Testnet Contracts", function () {
     it("should create gig and hire freelancer", async function () {
       const descs = ["Design", "Dev", "Ship"];
       const amts = [ethers.parseEther("2"), ethers.parseEther("5"), ethers.parseEther("3")];
-      const deadlines = [futureDeadline, futureDeadline, futureDeadline];
+      const deadlines = [futureDeadline, futureDeadline + 86400, futureDeadline + 2 * 86400];
       const price = ethers.parseEther("10");
 
       await freelancerEscrow.connect(freelancer).createGig(

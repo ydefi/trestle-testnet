@@ -81,7 +81,7 @@ async function main() {
 
   // 7. Digital RWA (Chainlink + token-gated whitelist via MockUSDC)
   console.log("[7/7] Deploying DigitalRWA...");
-  const RWA_META = hre.ethers.encodeBytes32String("ipfs://QmPlaceholder");
+  const RWA_META = "ipfs://QmPlaceholder";
   const MIN_WHITELIST_BALANCE = hre.ethers.parseUnits("1000", 6); // 1000 USDC (6 decimals)
   const DigitalRWA = await hre.ethers.getContractFactory("DigitalRWA");
   const digitalRWA = await DigitalRWA.deploy(

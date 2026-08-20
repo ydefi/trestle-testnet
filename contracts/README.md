@@ -18,16 +18,16 @@ Hardhat project with Solidity smart contracts for the Trestle DeFi Marketplace.
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| MockGovernanceToken | `0x9eD90e296D078Ec4621Dc18d4737dDe951551c88` | [View](https://sepolia.basescan.org/address/0x9eD90e296D078Ec4621Dc18d4737dDe951551c88#code) |
-| FeeDistributor | `0x1199e771BC3CB847FBd27362b65b74879E7D979D` | [View](https://sepolia.basescan.org/address/0x1199e771BC3CB847FBd27362b65b74879E7D979D#code) |
-| DigitalGoods | `0x28f00E0CAaC46D2A2EEBB47A5B8A141bAcCe9963` | [View](https://sepolia.basescan.org/address/0x28f00E0CAaC46D2A2EEBB47A5B8A141bAcCe9963#code) |
-| FreelancerEscrow | `0x686C4711a35633479F3Fed0D83b34DA63878CA00` | [View](https://sepolia.basescan.org/address/0x686C4711a35633479F3Fed0D83b34DA63878CA00#code) |
-| DigitalRWA | `0xE8FC7AbF3F4B95A2843C879F894AF6B9d8D297cC` | [View](https://sepolia.basescan.org/address/0xE8FC7AbF3F4B95A2843C879F894AF6B9d8D297cC#code) |
-| UserProfile | `0x976c6D9F4544E0b2f471698AdaeF54777C6FA3D2` | [View](https://sepolia.basescan.org/address/0x976c6D9F4544E0b2f471698AdaeF54777C6FA3D2#code) |
-| Mock USDC | `0x27fcAdD5142ECB1b6FC13314a2bDfB71dC92CeF3` | [View](https://sepolia.basescan.org/address/0x27fcAdD5142ECB1b6FC13314a2bDfB71dC92CeF3#code) |
-| Mock USDT | `0xc0D3bf40b488339cbBD55a3fE9167233682d2a27` | [View](https://sepolia.basescan.org/address/0xc0D3bf40b488339cbBD55a3fE9167233682d2a27#code) |
-| Mock xNOBT | `0xf4Fef25b23171586E8C87994B8f3D1a3AfCe4c71` | [View](https://sepolia.basescan.org/address/0xf4Fef25b23171586E8C87994B8f3D1a3AfCe4c71#code) |
-| Mock xBRT | `0x5DA85b68886d1fB7948C3eb5E7Ec0EB0E9B38B0f` | [View](https://sepolia.basescan.org/address/0x5DA85b68886d1fB7948C3eb5E7Ec0EB0E9B38B0f#code) |
+| MockGovernanceToken | `0xe7bFE19CeEd30871d50394E0c7C0b3b647aa85A0` | [View](https://sepolia.basescan.org/address/0xe7bFE19CeEd30871d50394E0c7C0b3b647aa85A0#code) |
+| FeeDistributor | `0x6AE0E1bBE014D222417eF3A350088A0204Ed9bF4` | [View](https://sepolia.basescan.org/address/0x6AE0E1bBE014D222417eF3A350088A0204Ed9bF4#code) |
+| DigitalGoods | `0xf22e65B24B3236B6B4983e81792541139Df6e3Dc` | [View](https://sepolia.basescan.org/address/0xf22e65B24B3236B6B4983e81792541139Df6e3Dc#code) |
+| FreelancerEscrow | `0x7928BE357160d31B6ab378D0566Ce360BE0228B0` | [View](https://sepolia.basescan.org/address/0x7928BE357160d31B6ab378D0566Ce360BE0228B0#code) |
+| DigitalRWA | `0x13A40Cea2156984B54fd337c51B6a5B47d569C2C` | [View](https://sepolia.basescan.org/address/0x13A40Cea2156984B54fd337c51B6a5B47d569C2C#code) |
+| UserProfile | `0x727B3915A7048a43814e4BD8Ac6c48269796c551` | [View](https://sepolia.basescan.org/address/0x727B3915A7048a43814e4BD8Ac6c48269796c551#code) |
+| Mock USDC | `0x9F52847AFaaB2504c560bC6c098b3D81772fa8C6` | [View](https://sepolia.basescan.org/address/0x9F52847AFaaB2504c560bC6c098b3D81772fa8C6#code) |
+| Mock USDT | `0x5c6F85EdcCC12E4B0c096bd002fD27699B7Ae740` | [View](https://sepolia.basescan.org/address/0x5c6F85EdcCC12E4B0c096bd002fD27699B7Ae740#code) |
+| Mock xNOBT | `0xD5De2C3f68ab67ccD2556ED976AE3d591c757a6d` | [View](https://sepolia.basescan.org/address/0xD5De2C3f68ab67ccD2556ED976AE3d591c757a6d#code) |
+| Mock xBRT | `0xCF1295f1f4F72eD6A2289EACc13673C53a5Ef865` | [View](https://sepolia.basescan.org/address/0xCF1295f1f4F72eD6A2289EACc13673C53a5Ef865#code) |
 
 **Chainlink ETH/USD (Base Sepolia):** `0x4aDC67696bA383F43DD60A9e78F2C97Fbbfc7cb1`
 
@@ -35,16 +35,16 @@ Hardhat project with Solidity smart contracts for the Trestle DeFi Marketplace.
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| MockGovernanceToken | `0xb9e8EB95E725bd80c2397c5796A1B7EB060D4ae7` | [View](https://sepolia.arbiscan.io/address/0xb9e8EB95E725bd80c2397c5796A1B7EB060D4ae7#code) |
-| FeeDistributor | `0xE8FC7AbF3F4B95A2843C879F894AF6B9d8D297cC` | [View](https://sepolia.arbiscan.io/address/0xE8FC7AbF3F4B95A2843C879F894AF6B9d8D297cC#code) |
-| DigitalGoods | `0xe7bFE19CeEd30871d50394E0c7C0b3b647aa85A0` | [View](https://sepolia.arbiscan.io/address/0xe7bFE19CeEd30871d50394E0c7C0b3b647aa85A0#code) |
-| FreelancerEscrow | `0x6AE0E1bBE014D222417eF3A350088A0204Ed9bF4` | [View](https://sepolia.arbiscan.io/address/0x6AE0E1bBE014D222417eF3A350088A0204Ed9bF4#code) |
-| DigitalRWA | `0xCF1295f1f4F72eD6A2289EACc13673C53a5Ef865` | [View](https://sepolia.arbiscan.io/address/0xCF1295f1f4F72eD6A2289EACc13673C53a5Ef865#code) |
-| UserProfile | `0xf22e65B24B3236B6B4983e81792541139Df6e3Dc` | [View](https://sepolia.arbiscan.io/address/0xf22e65B24B3236B6B4983e81792541139Df6e3Dc#code) |
-| Mock USDC | `0x7928BE357160d31B6ab378D0566Ce360BE0228B0` | [View](https://sepolia.arbiscan.io/address/0x7928BE357160d31B6ab378D0566Ce360BE0228B0#code) |
-| Mock USDT | `0x727B3915A7048a43814e4BD8Ac6c48269796c551` | [View](https://sepolia.arbiscan.io/address/0x727B3915A7048a43814e4BD8Ac6c48269796c551#code) |
-| Mock xNOBT | `0x9F52847AFaaB2504c560bC6c098b3D81772fa8C6` | [View](https://sepolia.arbiscan.io/address/0x9F52847AFaaB2504c560bC6c098b3D81772fa8C6#code) |
-| Mock xBRT | `0x5c6F85EdcCC12E4B0c096bd002fD27699B7Ae740` | [View](https://sepolia.arbiscan.io/address/0x5c6F85EdcCC12E4B0c096bd002fD27699B7Ae740#code) |
+| MockGovernanceToken | `0x13A40Cea2156984B54fd337c51B6a5B47d569C2C` | [View](https://sepolia.arbiscan.io/address/0x13A40Cea2156984B54fd337c51B6a5B47d569C2C#code) |
+| FeeDistributor | `0x93b1152F710d325154bF7A095c7509DA173DA25F` | [View](https://sepolia.arbiscan.io/address/0x93b1152F710d325154bF7A095c7509DA173DA25F#code) |
+| DigitalGoods | `0x479832CE889A41d57b8f9ACb3E191F08eA6e5856` | [View](https://sepolia.arbiscan.io/address/0x479832CE889A41d57b8f9ACb3E191F08eA6e5856#code) |
+| FreelancerEscrow | `0xB0aAcF8b6345f3342781d1A3D995D84375DB7d8E` | [View](https://sepolia.arbiscan.io/address/0xB0aAcF8b6345f3342781d1A3D995D84375DB7d8E#code) |
+| DigitalRWA | `0xB2a759C6FB0076FBBe3EEae20975537a999091bA` | [View](https://sepolia.arbiscan.io/address/0xB2a759C6FB0076FBBe3EEae20975537a999091bA#code) |
+| UserProfile | `0x812b404524EaFA0540C4BE773a14176bdFdC1B7E` | [View](https://sepolia.arbiscan.io/address/0x812b404524EaFA0540C4BE773a14176bdFdC1B7E#code) |
+| Mock USDC | `0x917E41b870708dea08Ab237E153ad72aF62FFc34` | [View](https://sepolia.arbiscan.io/address/0x917E41b870708dea08Ab237E153ad72aF62FFc34#code) |
+| Mock USDT | `0x44E54c3F5B30e3a7D53c1cab71b99dFCC764eB9b` | [View](https://sepolia.arbiscan.io/address/0x44E54c3F5B30e3a7D53c1cab71b99dFCC764eB9b#code) |
+| Mock xNOBT | `0x692cCC86f47A0277a1550aB81BB954f39a01820E` | [View](https://sepolia.arbiscan.io/address/0x692cCC86f47A0277a1550aB81BB954f39a01820E#code) |
+| Mock xBRT | `0x8Eef8aD9d3951F6AbdB27d65299F3949E43FAe20` | [View](https://sepolia.arbiscan.io/address/0x8Eef8aD9d3951F6AbdB27d65299F3949E43FAe20#code) |
 
 **Chainlink ETH/USD (Arb Sepolia):** `0x26dA680D98e805D54f0934f46b4669149c14d1cA`
 
@@ -52,16 +52,16 @@ Hardhat project with Solidity smart contracts for the Trestle DeFi Marketplace.
 
 | Contract | Address | Explorer |
 |----------|---------|----------|
-| MockGovernanceToken | `0x556f8e6dc3cb93b2bf74587b6750dff61918eaab` | [View](https://www.oklink.com/amoy/address/0x556f8e6dc3cb93b2bf74587b6750dff61918eaab) |
-| FeeDistributor | `0xC878166Bc446cb6Db91Dc55e9CcD1405834bc06B` | [View](https://www.oklink.com/amoy/address/0xC878166Bc446cb6Db91Dc55e9CcD1405834bc06B) |
-| DigitalGoods | `0x612B5dda1BCBe17Dff554bb446A8018a574DBe37` | [View](https://www.oklink.com/amoy/address/0x612B5dda1BCBe17Dff554bb446A8018a574DBe37) |
-| FreelancerEscrow | `0xBF4588E207c2191Ee9D3f114370a6dbf4BACFFf3` | [View](https://www.oklink.com/amoy/address/0xBF4588E207c2191Ee9D3f114370a6dbf4BACFFf3) |
-| DigitalRWA | `0x89f5394a468343F405285040664Fd77843D2a2e6` | [View](https://www.oklink.com/amoy/address/0x89f5394a468343F405285040664Fd77843D2a2e6) |
-| UserProfile | `0xe5665d1D2F180D27d328acCBB83f5fBE32A6666A` | [View](https://www.oklink.com/amoy/address/0xe5665d1D2F180D27d328acCBB83f5fBE32A6666A) |
-| Mock USDC | `0xb0a742a2302B043718b60053b135dC432C892852` | [View](https://www.oklink.com/amoy/address/0xb0a742a2302B043718b60053b135dC432C892852) |
-| Mock USDT | `0x432aCe196DFD335396257e0CDF33B3f815b6fF0B` | [View](https://www.oklink.com/amoy/address/0x432aCe196DFD335396257e0CDF33B3f815b6fF0B) |
-| Mock xNOBT | `0x4710d00AC3C2B6d0375F762076BDCE5ef835E64f` | [View](https://www.oklink.com/amoy/address/0x4710d00AC3C2B6d0375F762076BDCE5ef835E64f) |
-| Mock xBRT | `0xc550F40566C2aFEe6980aC3d64b9B3A2A0B8b914` | [View](https://www.oklink.com/amoy/address/0xc550F40566C2aFEe6980aC3d64b9B3A2A0B8b914) |
+| MockGovernanceToken | `0x5582496273a71E60e457D19773050CC848A2F52C` | [View](https://amoy.polygonscan.com/address/0x5582496273a71E60e457D19773050CC848A2F52C) |
+| FeeDistributor | `0xa1889d658601c7fA649a70516341fF4aac761ca8` | [View](https://amoy.polygonscan.com/address/0xa1889d658601c7fA649a70516341fF4aac761ca8) |
+| DigitalGoods | `0xcc5f9C02cD093002cE3921180e32f76cE03F01C0` | [View](https://amoy.polygonscan.com/address/0xcc5f9C02cD093002cE3921180e32f76cE03F01C0) |
+| FreelancerEscrow | `0x6baEA890Ef24F1e2dc9A5f46E7e0aeD2516BC518` | [View](https://amoy.polygonscan.com/address/0x6baEA890Ef24F1e2dc9A5f46E7e0aeD2516BC518) |
+| DigitalRWA | `0x88fB6Ae65B2c6011F4dE243BbDa100dC57Cd5FE5` | [View](https://amoy.polygonscan.com/address/0x88fB6Ae65B2c6011F4dE243BbDa100dC57Cd5FE5) |
+| UserProfile | `0x4012A59428C8A4b7f5D2ad8C0572e1da6060440c` | [View](https://amoy.polygonscan.com/address/0x4012A59428C8A4b7f5D2ad8C0572e1da6060440c) |
+| Mock USDC | `0x3944f16c03892de837f9C18Dab752Cd09dF113eF` | [View](https://amoy.polygonscan.com/address/0x3944f16c03892de837f9C18Dab752Cd09dF113eF) |
+| Mock USDT | `0x0061E989c93c38aAd363a86e1AD66875A93226d7` | [View](https://amoy.polygonscan.com/address/0x0061E989c93c38aAd363a86e1AD66875A93226d7) |
+| Mock xNOBT | `0x301C0CD35e76Ae3956f6410b46D2aD0E3f60Bd5B` | [View](https://amoy.polygonscan.com/address/0x301C0CD35e76Ae3956f6410b46D2aD0E3f60Bd5B) |
+| Mock xBRT | `0xAe743AC8eBE1fe05114bB82F68b51A9a2BabD9Df` | [View](https://amoy.polygonscan.com/address/0xAe743AC8eBE1fe05114bB82F68b51A9a2BabD9Df) |
 
 **Chainlink ETH/USD (Polygon Amoy):** `0x001382149eBa3441043c1c66972b4772963f5D43`
 

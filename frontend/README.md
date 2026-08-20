@@ -6,7 +6,7 @@ Next.js frontend for the Trestle DeFi testnet platform. Multi-chain support via 
 
 | Chain | Chain ID | Native Token | Explorer |
 |-------|----------|--------------|----------|
-| Polygon Amoy | 80002 | POL | oklink.com/amoy |
+| Polygon Amoy | 80002 | POL | amoy.polygonscan.com |
 | Base Sepolia | 84532 | ETH | sepolia.basescan.org |
 | Arbitrum Sepolia | 421614 | ETH | sepolia.arbiscan.io |
 

@@ -2,19 +2,25 @@ import { CHAIN_CONFIG } from "../config/contracts";
 
 const API_KEY = process.env.NEXT_PUBLIC_BLOCKSCOUT_API_KEY ?? "";
 
-export function getBlockscoutUrl(chainId: number): string {
+export function getBlockscoutUrl(chainId: number): string | null {
   for (const config of Object.values(CHAIN_CONFIG)) {
-    if (config.id === chainId) return config.blockscout;
+    if (config.id === chainId && "blockscout" in config) return (config as any).blockscout;
   }
-  return "https://amoy.blockscout.com";
+  return null;
+}
+
+export function getExplorerUrl(chainId: number): string {
+  for (const config of Object.values(CHAIN_CONFIG)) {
+    if (config.id === chainId) return config.explorer;
+  }
+  return "https://amoy.polygonscan.com";
 }
 
 async function api(chainId: number, path: string) {
   const baseUrl = getBlockscoutUrl(chainId);
+  if (!baseUrl) return null;
   try {
-    const opts: RequestInit = { headers: { "Content-Type": "application/json" } };
-    if (API_KEY) (opts.headers as Record<string, string>)["x-api-key"] = API_KEY;
-    const r = await fetch(`${baseUrl}/api/v2${path}`, opts);
+    const r = await fetch(`${baseUrl}/api/v2${path}`);
     if (!r.ok) return null;
     return r.json();
   } catch { return null; }
@@ -47,13 +53,13 @@ export interface BlockscoutAddress {
 }
 
 export async function getTransactions(address: string, page = 0, chainId = 80002): Promise<BlockscoutTx[] | null> {
-  const data = await api(chainId, `/addresses/${address}/transactions?page=${page + 1}&limit=10`);
+  const data = await api(chainId, `/addresses/${address}/transactions`);
   if (!data || !data.items) return null;
   return data.items;
 }
 
 export async function getTokenTransfers(address: string, chainId = 80002): Promise<BlockscoutTokenTransfer[] | null> {
-  const data = await api(chainId, `/addresses/${address}/token-transfers?limit=10`);
+  const data = await api(chainId, `/addresses/${address}/token-transfers`);
   if (!data || !data.items) return null;
   return data.items;
 }
@@ -65,11 +71,11 @@ export async function getAddressInfo(address: string, chainId = 80002): Promise<
 }
 
 export function explorerTxUrl(chainId: number, hash: string) {
-  return `${getBlockscoutUrl(chainId)}/tx/${hash}`;
+  return `${getExplorerUrl(chainId)}/tx/${hash}`;
 }
 
 export function explorerAddressUrl(chainId: number, address: string) {
-  return `${getBlockscoutUrl(chainId)}/address/${address}`;
+  return `${getExplorerUrl(chainId)}/address/${address}`;
 }
 
 export function rpcUrl(chainId: number) {
@@ -80,6 +86,9 @@ export function rpcUrl(chainId: number) {
 }
 
 export function explorerUrl(chainId?: number) {
-  if (chainId) return getBlockscoutUrl(chainId);
-  return `${getBlockscoutUrl(80002)}/api/v2`;
+  if (chainId) {
+    const url = getBlockscoutUrl(chainId);
+    if (url) return url;
+  }
+  return "https://amoy.polygonscan.com";
 }

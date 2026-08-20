@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-contract FeeDistributor is Ownable {
+contract FeeDistributor is Ownable, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
     error NoFees();
@@ -58,7 +59,7 @@ contract FeeDistributor is Ownable {
         emit SplitUpdated(_yieldBps, _treasuryBps);
     }
 
-    function distribute(address token) external onlyOwner {
+    function distribute(address token) external onlyOwner nonReentrant {
         uint256 balance;
         if (token == address(0)) {
             balance = address(this).balance;
