@@ -33,6 +33,8 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
 
     IERC20 public govToken;
     uint256 public minGovBalance;
+    mapping(address => uint256) public whitelistTokens;
+    address[] public whitelistTokenList;
     AggregatorV3Interface public immutable priceFeed;
     uint256 public currentPrice;
     uint256 public lastPriceUpdate;
@@ -76,13 +78,20 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
         cap = _cap;
         govToken = IERC20(_govToken);
         minGovBalance = _minGovBalance;
+        if (_govToken != address(0) && _minGovBalance > 0) {
+            whitelistTokens[_govToken] = _minGovBalance;
+            whitelistTokenList.push(_govToken);
+        }
         priceFeed = AggregatorV3Interface(_priceFeed);
     }
 
     function isWhitelisted(address _account) public view returns (bool) {
         if (manualWhitelist[_account]) return true;
-        if (minGovBalance > 0 && address(govToken) != address(0)) {
-            return govToken.balanceOf(_account) >= minGovBalance;
+        uint256 len = whitelistTokenList.length;
+        for (uint256 i; i < len; i++) {
+            address token = whitelistTokenList[i];
+            uint256 minBalance = whitelistTokens[token];
+            if (minBalance > 0 && IERC20(token).balanceOf(_account) >= minBalance) return true;
         }
         return false;
     }
@@ -134,8 +143,27 @@ contract DigitalRWA is ERC20, ERC20Burnable, ERC20Pausable, AccessControl, Reent
     }
 
     function setWhitelistToken(address _token, uint256 _minBalance) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        govToken = IERC20(_token);
-        minGovBalance = _minBalance;
+        if (_token == address(0)) revert ZeroAddress();
+        if (_minBalance == 0) {
+            if (whitelistTokens[_token] != 0) {
+                whitelistTokens[_token] = 0;
+                uint256 len = whitelistTokenList.length;
+                for (uint256 i; i < len; i++) {
+                    if (whitelistTokenList[i] == _token) {
+                        whitelistTokenList[i] = whitelistTokenList[len - 1];
+                        whitelistTokenList.pop();
+                        break;
+                    }
+                }
+            }
+        } else {
+            if (whitelistTokens[_token] == 0) whitelistTokenList.push(_token);
+            whitelistTokens[_token] = _minBalance;
+        }
+        if (address(govToken) == _token) {
+            govToken = IERC20(_token);
+            minGovBalance = _minBalance;
+        }
         emit WhitelistTokenUpdated(_token, _minBalance);
     }
 

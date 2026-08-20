@@ -111,6 +111,21 @@ describe("Testnet Contracts", function () {
       expect(await digitalRWA.isWhitelisted(user.address)).to.be.true;
     });
 
+    it("should whitelist via multiple tokens (USDC + USDT style)", async function () {
+      expect(await digitalRWA.isWhitelisted(user.address)).to.be.false;
+
+      // add a second whitelist token alongside GOV
+      await digitalRWA.connect(deployer).setWhitelistToken(await mockToken.getAddress(), ethers.parseEther("50"));
+      expect(await digitalRWA.isWhitelisted(user.address)).to.be.false;
+
+      await mockToken.connect(deployer).transfer(user.address, ethers.parseEther("50"));
+      expect(await digitalRWA.isWhitelisted(user.address)).to.be.true;
+
+      // removing the token from the whitelist un-whitelists
+      await digitalRWA.connect(deployer).setWhitelistToken(await mockToken.getAddress(), 0);
+      expect(await digitalRWA.isWhitelisted(user.address)).to.be.false;
+    });
+
     it("should whitelist via manual override", async function () {
       expect(await digitalRWA.isWhitelisted(user.address)).to.be.false;
       await digitalRWA.connect(deployer).setManualWhitelist(user.address, true);

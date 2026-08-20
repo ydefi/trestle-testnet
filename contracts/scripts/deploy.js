@@ -12,7 +12,12 @@ async function main() {
   const TREASURY = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";
   const BUYBACK_BURN = "0x64A7ef92229D2D97d1C4fd3DB15Db2d94d3D66F6";
   const GOV_SUPPLY = hre.ethers.parseEther("1000000");
-  const CHAINLINK_POL_USD = "0x001382149eBa3441043c1c66972b4772963f5D43";
+  const CHAINLINK_FEEDS = {
+    amoy: "0x001382149eBa3441043c1c66972b4772963f5D43", // POL/USD
+    arbitrumSepolia: "0x26dA680D98e805D54f0934f46b4669149c14d1cA", // ETH/USD
+    baseSepolia: "0x4aDC67696bA383F43DD60A9e78F2C97F4fcF617b", // ETH/USD
+  };
+  const PRICE_FEED = CHAINLINK_FEEDS[networkName] || CHAINLINK_FEEDS.amoy;
 
   const deployed = {};
 
@@ -88,7 +93,7 @@ async function main() {
     "Trestle Real Asset 1", "TRA1",
     RWA_META, GOV_SUPPLY, deployer.address,
     deployed.mockUSDC, MIN_WHITELIST_BALANCE,
-    CHAINLINK_POL_USD
+    PRICE_FEED
   );
   await digitalRWA.waitForDeployment();
   deployed.digitalRWA = await digitalRWA.getAddress();
@@ -117,7 +122,7 @@ async function main() {
     await verify("MockERC20", deployed.mockXBRT, ["Mock xBRT", "xBRT", 18, GOV_SUPPLY]);
     await verify("DigitalRWA", deployed.digitalRWA, [
       "Trestle Real Asset 1", "TRA1", RWA_META, GOV_SUPPLY, deployer.address,
-      deployed.mockUSDC, MIN_WHITELIST_BALANCE, CHAINLINK_POL_USD
+      deployed.mockUSDC, MIN_WHITELIST_BALANCE, PRICE_FEED
     ]);
   }
 }
